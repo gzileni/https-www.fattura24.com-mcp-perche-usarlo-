@@ -336,3 +336,36 @@ Il Docker include tre ulteriori operazioni basate su API **documentate**:
 Fonti: [TestKey](https://www.fattura24.com/api/verifica/), [SaveCustomer](https://www.fattura24.com/api/crea-contatto/), [GetFile](https://www.fattura24.com/api/download-pdf/).
 
 **Limiti espliciti:** la generazione di PDF di DDT o la compilazione del gestionale tramite un browser automatizzato non sono ancora presenti. Anche una futura automazione browser richiederà una sessione autenticata sul dispositivo sotto controllo dell'utente e test sulla UI reale. Non esiste un metodo per attivare un server Docker spento da un plugin cloud senza un agente locale o un sistema remoto già operativo.
+
+## Collaudo incluso nell’immagine: nessun Python sul PC
+
+I launcher standalone eseguono ora automaticamente il collaudo MCP dopo l’avvio
+(anche quando riutilizzano il container esistente). Per ripeterlo manualmente:
+
+```sh
+docker exec fattura24-mcp python /app/smoke_test.py
+```
+
+Bastano Docker e l’immagine: Python, server MCP, dipendenze e collaudo sono nel
+container; non servono clone, Compose, Python host o chiave Fattura24. La porta
+è `127.0.0.1:8765`, endpoint `/mcp`, con token Bearer privato creato dal launcher.
+Il test rifiuta istanze con scritture abilitate e chiama solo i sei tool locali
+con dati inventati. Nessuna chiamata a TestKey, GetFile, SaveDocument o SaveCustomer.
+I vecchi container privi di `/app/smoke_test.py` richiedono un aggiornamento
+esplicito tramite `--replace-existing` / `-ReplaceExisting`; il volume è conservato.
+
+Claude Code o un esecutore locale autorizzato per ChatGPT possono scaricare,
+ispezionare ed eseguire il launcher della piattaforma; le autorizzazioni già
+fornite nella sessione restano valide. Il launcher non configura automaticamente
+il client MCP: nel client locale usare Streamable HTTP, URL
+`http://127.0.0.1:8765/mcp` e `Authorization: Bearer <token locale>`, leggendo il
+segreto dal file privato senza copiarlo in chat. Il plugin ChatGPT cloud configura
+invece il MCP ufficiale con OAuth: non trasporta automaticamente le richieste
+al Docker Desktop dell’utente. Questo repository non fornisce un esecutore
+remoto per il PC né un tunnel cloud.
+
+Il workflow GHCR collauda un candidato isolato con `--network none` prima di
+pubblicarlo, poi scarica ed esegue **il digest pubblicato**, verifica le dipendenze
+con `pip check` e prova il launcher Linux due volte per verificarne il riuso.
+Il workflow Tests verifica anche l’accesso HTTP dalla macchina host e la sintassi
+PowerShell; quest’ultimo controllo non equivale a un test Docker Desktop Windows.

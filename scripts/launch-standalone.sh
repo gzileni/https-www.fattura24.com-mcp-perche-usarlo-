@@ -19,6 +19,10 @@ if ! docker info >/dev/null 2>&1; then
   fi
 fi
 docker info >/dev/null 2>&1 || { echo 'Docker Engine non disponibile.' >&2; exit 1; }
+verify_bridge() {
+  # Runs with the container's private token; no host Python or token disclosure.
+  docker exec -e BRIDGE_URL=http://127.0.0.1:8765 "$NAME" python /app/smoke_test.py
+}
 if docker container inspect "$NAME" >/dev/null 2>&1; then
   if [[ "$REPLACE" != "--replace-existing" ]]; then
     if [[ "$(docker inspect -f '{{.State.Running}}' "$NAME")" == 'true' ]]; then
@@ -27,7 +31,7 @@ if docker container inspect "$NAME" >/dev/null 2>&1; then
       docker start "$NAME" >/dev/null
       echo 'Container esistente riavviato.'
     fi
-    echo 'Test: http://127.0.0.1:8765/health'
+    verify_bridge
     exit 0
   fi
   echo 'Sostituzione esplicita del SOLO container; volume conservato.'
@@ -50,6 +54,7 @@ docker run -d --name "$NAME" --restart unless-stopped \
   "$IMAGE" >/dev/null
 for _ in {1..30}; do
   if [[ "$(curl -fsS --max-time 2 http://127.0.0.1:8765/health 2>/dev/null || true)" == 'ok' ]]; then
+    verify_bridge
     echo '[OK] MCP locale http://127.0.0.1:8765/mcp'
     exit 0
   fi

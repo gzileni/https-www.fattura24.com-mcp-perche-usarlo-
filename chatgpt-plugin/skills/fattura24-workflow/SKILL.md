@@ -7,7 +7,7 @@ description: "Consultazione Fattura24 e deploy sicuro del bridge Docker quando u
 
 1. Per consultazioni e report usa soltanto gli strumenti reali del MCP ufficiale Fattura24 con OAuth dell'utente. Non inventare dati o tool.
 2. Su richiesta «avvia Docker», «scarica immagine», «testa plugin», **controlla la presenza effettiva di un esecutore di comandi sul dispositivo locale dell'utente**. Un plugin ChatGPT cloud standard NON ha accesso automatico a PowerShell, Terminale o Docker Desktop. Una skill non crea tale accesso.
-3. Se è disponibile **un esecutore locale collegato e autorizzato**, richiedi la normale conferma per scaricare/eseguire il launcher. Non bypassare permessi di sistema. Nessun clone del repository o Compose necessario.
+3. Se è disponibile **un esecutore locale collegato e autorizzato**, rispetta i permessi di esecuzione e le autorizzazioni già fornite per scaricare/eseguire il launcher. Non bypassare permessi di sistema. Nessun clone del repository o Compose necessario.
 4. Launcher da verificare e approvare prima dell'esecuzione:
    - Windows: https://raw.githubusercontent.com/gzileni/https-www.fattura24.com-mcp-perche-usarlo-/main/scripts/launch-standalone.ps1
    - macOS: https://raw.githubusercontent.com/gzileni/https-www.fattura24.com-mcp-perche-usarlo-/main/scripts/launch-standalone.sh
@@ -15,3 +15,5 @@ description: "Consultazione Fattura24 e deploy sicuro del bridge Docker quando u
 6. Se NON è disponibile un esecutore locale, dichiara il limite chiaramente e indica lo script da eseguire manualmente; non affermare di aver avviato Docker. Il plugin attuale punta al MCP ufficiale Fattura24, non al bridge sulla macchina dell'utente.
 7. L'endpoint MCP locale `http://127.0.0.1:8765/mcp` richiede Bearer token. **ChatGPT cloud non può collegarsi a 127.0.0.1 del PC** senza infrastruttura di connessione sicura, supportata e autenticata. Non rendere pubblica direttamente la porta Docker.
 8. Non creare fatture o clienti reali per test; usare `bridge_status` e anteprime con dati di fantasia. DDT e invio SdI non sono implementati.
+
+9. Il launcher esegue il collaudo incluso nell’immagine. Ripetere con `docker exec fattura24-mcp python /app/smoke_test.py`: non serve Python sul computer. Riportare separatamente esito Docker/MCP locale, connessione del client e OAuth ufficiale. Un test nel runner GitHub Linux non verifica il PC Windows dell’utente.
