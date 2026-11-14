@@ -17,3 +17,21 @@ description: "Consultazione Fattura24 e deploy sicuro del bridge Docker quando u
 8. Non creare fatture o clienti reali per test; usare `bridge_status` e anteprime con dati di fantasia. DDT e invio SdI non sono implementati.
 
 9. Il launcher esegue il collaudo incluso nell’immagine. Ripetere con `docker exec fattura24-mcp python /app/smoke_test.py`: non serve Python sul computer. Riportare separatamente esito Docker/MCP locale, connessione del client e OAuth ufficiale. Un test nel runner GitHub Linux non verifica il PC Windows dell’utente.
+
+
+## Server MCP unico (architettura corrente)
+
+- Configurare soltanto `http://127.0.0.1:8765/mcp` nel client locale autorizzato.
+- Dopo l’avvio, se l’utente chiede dati reali e lo stato ufficiale è scollegato,
+  eseguire `docker exec -it fattura24-mcp python /app/connect_official.py` nella
+  shell locale autorizzata e far completare all’utente il login nel browser.
+  Non chiedere password, API key o token OAuth in chat. Il comando resta in
+  attesa fino a completamento o scadenza; non dichiarare collegato l’account
+  senza l’esito positivo. Non avviare OAuth nei test con dati dimostrativi.
+- Aggiornare `tools/list` dopo OAuth: i tool ufficiali mantengono nomi e schemi
+  scoperti dal provider; il bridge inoltra chiamate e risposte senza replicarli.
+- Implementare tool locali soltanto per i gap, con nomi non in conflitto.
+- I tool ufficiali non sono un secondo MCP da configurare: il container è il
+  client OAuth del servizio remoto e li espone insieme ai tool locali.
+- L’istanza è personale per un solo account; il token locale autorizza anche
+  la consultazione dell’account collegato. Nessuna scrittura per i test.

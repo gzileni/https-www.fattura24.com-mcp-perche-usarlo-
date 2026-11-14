@@ -2,16 +2,37 @@
 
 ![Stato: prototipo](https://img.shields.io/badge/stato-prototipo-orange) ![Windows](https://img.shields.io/badge/Windows-11-blue) ![macOS](https://img.shields.io/badge/macOS-Intel%20%7C%20Apple%20Silicon-blue) ![Licenza MIT](https://img.shields.io/badge/licenza-MIT-green)
 
-> **Progetto open source non ufficiale**, indipendente da Fattura24, OpenAI e Anthropic. La modalità predefinita è **sola anteprima**. Include adesso anche una **prima integrazione di scrittura reale per fatture semplici** tramite API ufficiali, disattivata finché l'utente non abilita esplicitamente le operazioni. DDT, invio SdI, automazione di Docker da ChatGPT e accesso remoto non sono completati.
+> **Progetto open source non ufficiale**, indipendente da Fattura24, OpenAI e Anthropic. Un solo endpoint `/mcp` espone i **wrapper di lettura del MCP ufficiale** dopo OAuth e i **tool locali per i gap**; le scritture sono disabilitate per impostazione predefinita. Include adesso anche una **prima integrazione di scrittura reale per fatture semplici** tramite API ufficiali, disattivata finché l'utente non abilita esplicitamente le operazioni. DDT, invio SdI, automazione di Docker da ChatGPT e accesso remoto non sono completati.
 
-![Schema dell'architettura](docs/images/architettura.svg)
+## Un server MCP unico: ufficiale come wrapper, gap come tool locali
+
+L’assistente configura un solo URL: `http://127.0.0.1:8765/mcp`.
+Dopo l’avvio del container, collegare una volta il proprio account:
+
+```sh
+docker exec -it fattura24-mcp python /app/connect_official.py
+```
+
+Aprire nel browser locale il link OAuth mostrato e autorizzare Fattura24. Poi
+aggiornare `tools/list` o riconnettere il client: nello stesso elenco compariranno
+`report_bilancino` e gli altri tool ufficiali realmente disponibili, insieme ai
+tool locali. Non servono un secondo MCP o una chiave API per la consultazione.
+
+Nomi, schemi e risposte dei tool ufficiali vengono dal server remoto; nessuna
+replica del bilancino viene calcolata dal bridge. I tool mancanti vengono
+implementati localmente con nomi distinti. Il ticket esterno non read-only è
+escluso. I token OAuth restano nel volume privato `/data`, separati dal token
+del client locale. Istanza personale per un solo account.
+
+[Architettura e procedura dettagliata](docs/ARCHITETTURA_MCP_UNICO.md).
+
 
 ## 🐳 Un'unica immagine contiene già TUTTO il server MCP
 
 **Non bisogna installare un altro server MCP.** Nell'immagine `ghcr.io/gzileni/fattura24-mcp-bridge:latest` sono già presenti:
 - Python, dipendenze e server HTTP **Uvicorn**;
 - server **MCP Streamable HTTP** alla porta interna `8765`, percorso `/mcp`;
-- tool MCP del bridge e client REST Fattura24;
+- wrapper del MCP ufficiale, client OAuth PKCE, tool locali aggiuntivi e client REST opzionale;
 - endpoint di verifica `/health`.
 
 Per avviarla è sufficiente **Docker**, un token privato e il comando `docker run`: **non servono Git, clone del repository, Python sull'host, Docker Compose o un secondo container**. Esempio concettuale (il token va generato e custodito localmente, non usato letteralmente come sotto):
@@ -35,13 +56,13 @@ Per l'uso reale, preferisci i [launcher standalone Windows e Mac](scripts/), che
 
 Vuoi chiedere a un assistente AI: *«Preparami una fattura per 10 unità a 25 euro + IVA»*, controllare i totali e ottenere un'anteprima senza aprire decine di schermate. Questo repository contiene un piccolo **server MCP** avviabile con Docker Desktop su Windows o Mac, istruzioni per ChatGPT e una skill per Claude.
 
-**Attenzione:** la funzionalità di analisi dei dati contabili è già disponibile tramite **il server MCP ufficiale Fattura24**, separato dal bridge. Il server ufficiale è prevalentemente di sola lettura. Il bridge supporta anche il salvataggio REST opzionale di **fatture semplici** quando configurato e attivato; resta necessario il controllo dei documenti nell'interfaccia ufficiale.
+**Analisi contabile:** il bridge inoltra gli strumenti al **server MCP ufficiale Fattura24** tramite un client OAuth interno. Per l’assistente rimane un solo `/mcp`. Il server ufficiale è prevalentemente di sola lettura. Il bridge supporta anche il salvataggio REST opzionale di **fatture semplici** quando configurato e attivato; resta necessario il controllo dei documenti nell'interfaccia ufficiale.
 
 ### Cosa funziona
 
 | Operazione | Situazione |
 | --- | --- |
-| Analisi fatturato, IVA e incassi | Tramite [MCP ufficiale Fattura24](https://www.fattura24.com/mcp/perche-usarlo/), con autorizzazione al proprio account |
+| Bilancino, fatturato, IVA e incassi | Wrapper dei tool ufficiali nello stesso `/mcp`, dopo collegamento OAuth; collaudo con provider dimostrativo, account reale ancora da autorizzare |
 | Controllo stato del container | ✅ |
 | Anteprima imponibile, IVA e totale | ✅ |
 | Anteprima XML esemplificativo | ✅ — **non** è un XML fiscale certificato |
@@ -56,12 +77,10 @@ Vuoi chiedere a un assistente AI: *«Preparami una fattura per 10 unità a 25 eu
 
 ```mermaid
 flowchart TD
-    U["Utente: Windows / Mac / Smartphone"] --> AI["ChatGPT o Claude"]
-    AI --> O["MCP ufficiale Fattura24\nlettura e report"]
-    AI -. "solo con URL HTTPS autenticato e configurato" .-> B["Bridge MCP Docker\nanteprime soltanto"]
-    B --> D["Docker Desktop\nPC acceso"]
-    O --> F["Fattura24"]
-    B -. "SaveDocument opzionale, solo fatture semplici" .-> F
+    C["Client AI autorizzato"] --> M["Container: unico /mcp"]
+    M --> W["Wrapper dei tool ufficiali"]
+    M --> L["Tool locali per i gap"]
+    W --> F["MCP remoto Fattura24"]
 ```
 
 ![Come avviare il progetto](docs/images/avvio.svg)
@@ -359,8 +378,8 @@ ispezionare ed eseguire il launcher della piattaforma; le autorizzazioni già
 fornite nella sessione restano valide. Il launcher non configura automaticamente
 il client MCP: nel client locale usare Streamable HTTP, URL
 `http://127.0.0.1:8765/mcp` e `Authorization: Bearer <token locale>`, leggendo il
-segreto dal file privato senza copiarlo in chat. Il plugin ChatGPT cloud configura
-invece il MCP ufficiale con OAuth: non trasporta automaticamente le richieste
+segreto dal file privato senza copiarlo in chat. Il pacchetto ChatGPT cloud storico configura
+direttamente il MCP ufficiale con OAuth: non trasporta automaticamente le richieste
 al Docker Desktop dell’utente. Questo repository non fornisce un esecutore
 remoto per il PC né un tunnel cloud.
 
@@ -371,3 +390,5 @@ Il workflow Tests verifica anche l’accesso HTTP dalla macchina host e la sinta
 PowerShell; quest’ultimo controllo non equivale a un test Docker Desktop Windows.
 
 Report di collaudo con evidenze, digest e limiti: [TEST_E2E_2026-11-14.md](docs/TEST_E2E_2026-11-14.md).
+
+La verifica del server unico è documentata in [TEST_MCP_UNICO_2026-11-14.md](docs/TEST_MCP_UNICO_2026-11-14.md); il report E2E precedente fotografa il commit precedente alla federazione.

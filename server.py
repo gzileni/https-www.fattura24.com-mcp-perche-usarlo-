@@ -1,4 +1,4 @@
-"""Local MCP preview server. No REST writes; no Docker process management."""
+"""One MCP endpoint: official read tools plus local gap implementations."""
 import hmac
 import json
 import os
@@ -8,15 +8,19 @@ from core import Document, preview, make_xml, fattura24_xml
 from fattura24_client import configured, register_invoice
 from fattura24_extra import Customer, customer_xml, test_key_once, save_customer, get_pdf
 
-mcp = FastMCP("Fattura24 Preview Bridge", stateless_http=True, json_response=True)
+from official_gateway import OfficialConnection, ConnectionRoutes
+
+official = OfficialConnection()
+mcp = FastMCP("Fattura24 Unified MCP Bridge", stateless_http=True, json_response=True)
 
 @mcp.tool()
-def bridge_status() -> dict:
+async def bridge_status() -> dict:
     """Report actual preview-only capabilities; no credentials exposed."""
     return {
         "status": "ready",
-        "mode": "preview_only",
-        "tools": ["bridge_status", "prepare_invoice", "invoice_xml_preview", "prepare_ddt_notes", "invoice_api_payload_preview", "save_invoice_to_fattura24", "verify_fattura24_api_key", "customer_payload_preview", "save_customer_to_fattura24", "download_document_pdf"],
+        "mode": "official_wrappers_and_local_extensions",
+        "official": await official.status(),
+        "tools": ["bridge_status", "prepare_invoice", "invoice_xml_preview", "prepare_ddt_notes", "invoice_api_payload_preview", "save_invoice_to_fattura24", "verify_fattura24_api_key", "customer_payload_preview", "save_customer_to_fattura24", "download_document_pdf"] + [t.name for t in official.tools],
         "writes_enabled": configured(),
         "writes_require_explicit_confirmation": True,
         "ddt_registration_enabled": False,
@@ -94,6 +98,23 @@ def download_document_pdf(doc_id: str) -> dict:
     """
     return get_pdf(doc_id)
 
+# Override the SDK dispatchers without inventing schemas for official tools.
+@mcp._mcp_server.list_tools()
+async def unified_tools():
+    local = await mcp.list_tools()
+    names = {t.name for t in local}
+    remote = await official.list_tools()
+    if names.intersection(t.name for t in remote):
+        raise RuntimeError("Conflitto di nomi fra tool ufficiali e implementazioni locali")
+    return local + remote
+
+@mcp._mcp_server.call_tool()
+async def unified_call(name: str, arguments: dict):
+    local_names = {t.name for t in await mcp.list_tools()}
+    if name in local_names:
+        return await mcp.call_tool(name, arguments)
+    return await official.call_tool(name, arguments)
+
 @mcp.custom_route("/health", methods=["GET"])
 async def health(request):
     return PlainTextResponse("ok")
@@ -109,8 +130,10 @@ class BearerGuard:
             headers = dict(scope.get("headers", []))
             actual = headers.get(b"authorization", b"").decode(errors="ignore")
             expected = os.environ.get("BRIDGE_TOKEN", "")
-            if not expected or not hmac.compare_digest(actual, f"Bearer {expected}"):
+            if not expected or not hmac.compare_digest(actual.encode(), f"Bearer {expected}".encode()):
                 return await PlainTextResponse("Unauthorized", status_code=401)(scope, receive, send)
         return await self.app(scope, receive, send)
 
-app = BearerGuard(backend)
+
+
+app = ConnectionRoutes(BearerGuard(backend), official)

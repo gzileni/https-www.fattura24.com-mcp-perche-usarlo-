@@ -23,3 +23,14 @@ L'immagine Docker multipiattaforma viene pubblicata automaticamente con il workf
 ## Avvio senza clonare il repository
 
 Il launcher standalone per Windows è [launch-standalone.ps1](../scripts/launch-standalone.ps1); per macOS è [launch-standalone.sh](../scripts/launch-standalone.sh). Entrambi utilizzano soltanto Docker, scaricano l'immagine GHCR e avviano un container locale protetto. Le skill ChatGPT e Claude descrivono come richiamarli **in presenza di un esecutore locale realmente disponibile**; il plugin cloud ChatGPT attuale non dispone di accesso shell al dispositivo dell'utente. Non dichiarare che l'avvio sia avvenuto finché non è stata verificata la risposta /health.
+
+
+## Server unico nel container
+
+Il bridge corrente espone allo stesso `/mcp` sia i wrapper ufficiali dopo OAuth
+sia i tool locali per i gap. Il file `mcp.local.example.json` è un riferimento
+per un esecutore/client locale autorizzato: sostituire il token soltanto nel
+file privato sul PC. Non installare tale esempio nel cloud con `localhost`.
+`mcp.json` resta la configurazione storica di accesso diretto al provider;
+non rappresenta il server unificato e non è una configurazione del container.
+L’eventuale client del bridge deve avere un solo server configurato.

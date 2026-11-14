@@ -118,9 +118,9 @@ def main():
     print("[OK] MCP initialize + notifications/initialized; protocol=" + PROTOCOL)
     tools = rpc(token, "tools/list", {})["tools"]
     names = {tool["name"] for tool in tools}
-    check(SAFE_TOOLS | EXTERNAL_TOOLS == names, "Elenco tool inatteso: " + str(sorted(names)))
+    check((SAFE_TOOLS | EXTERNAL_TOOLS) <= names, "Tool locali mancanti: " + str(sorted(names)))
     check(all(tool.get("inputSchema", {}).get("type") == "object" for tool in tools), "Schema tool mancante")
-    print("[OK] tools/list: 10 strumenti con schema")
+    print("[OK] tools/list: " + str(len(names)) + " strumenti con schema")
 
     state = call(token, "bridge_status", {})
     check(state["writes_enabled"] is False, "Test interrotto: scritture abilitate sull'istanza")
@@ -162,7 +162,7 @@ def main():
     call(token, "prepare_invoice", {"payload_json": '{"customer_name":"DEMO","rows":[]}'}, expect_error=True)
     call(token, "nonexistent_demo_tool", {}, expect_error=True)
     print("[OK] Payload non valido e tool inesistente restituiscono isError")
-    print("TUTTI I CONTROLLI SUPERATI: 6 tool locali; nessuna API Fattura24 chiamata.")
+    print("TUTTI I CONTROLLI SUPERATI: 6 tool locali; nessun report o scrittura Fattura24 chiamati.")
 
 
 if __name__ == "__main__":

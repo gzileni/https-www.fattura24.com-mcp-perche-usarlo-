@@ -7,6 +7,7 @@ on:
       - 'requirements.txt'
       - '*.py'
       - 'scripts/smoke_test.py'
+      - 'scripts/connect_official.py'
       - '.github/workflows/publish-ghcr.yml'
   workflow_dispatch:
   release:
@@ -53,6 +54,7 @@ jobs:
           docker run -d --name fattura24-candidate --network none --read-only --tmpfs /tmp --cap-drop ALL --security-opt no-new-privileges -e BRIDGE_TOKEN=ci-demo-only -e FATTURA24_ENABLE_WRITES=false fattura24-candidate
           docker exec fattura24-candidate python -m pip check
           docker exec fattura24-candidate python /app/smoke_test.py
+          docker run --rm --network none --read-only --tmpfs /tmp -v "$PWD/tests:/tests:ro" fattura24-candidate python /tests/run_official_demo.py
           docker rm -f fattura24-candidate
       - name: Build and push linux/amd64 and linux/arm64
         id: build
@@ -73,6 +75,7 @@ jobs:
           docker run -d --name fattura24-published --network none --read-only --tmpfs /tmp --cap-drop ALL --security-opt no-new-privileges -e BRIDGE_TOKEN=ci-demo-only -e FATTURA24_ENABLE_WRITES=false ghcr.io/gzileni/fattura24-mcp-bridge@${{ steps.build.outputs.digest }}
           docker exec fattura24-published python -m pip check
           docker exec fattura24-published python /app/smoke_test.py
+          docker run --rm --network none --read-only --tmpfs /tmp -v "$PWD/tests:/tests:ro" ghcr.io/gzileni/fattura24-mcp-bridge@${{ steps.build.outputs.digest }} python /tests/run_official_demo.py
           docker inspect --format 'Image={{.Image}} User={{.Config.User}} Health={{.State.Health.Status}}' fattura24-published
       - name: Validate standalone Linux launcher and idempotent reuse
         run: |
