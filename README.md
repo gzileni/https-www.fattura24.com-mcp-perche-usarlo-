@@ -71,6 +71,12 @@ bash /tmp/fattura24-launch.sh
 
 **Verifica:** `curl.exe http://127.0.0.1:8765/health` (Windows) oppure `curl http://127.0.0.1:8765/health` (Mac). Risposta attesa: `ok`.
 
+## 💶 Aruba VPS: quanto costa tenere Fattura24 MCP online 24/7?
+
+Ho aggiunto una [**analisi dei costi Aruba VPS con prezzi ufficiali e scenari concreti**](docs/ARUBA_VPS_COSTI.md), verificata il **14 novembre 2026**. Per un singolo bridge con Docker e margine per un reverse proxy, il punto di partenza consigliato è **Aruba Cloud VPS O2A4 (2 vCPU, 4 GB): 6,29 € + IVA/mese**, cioè circa **7,67 € IVA inclusa**. In caso di futura automazione browser per i DDT, valutare **O4A8 (4 vCPU, 8 GB): 11,79 € + IVA/mese**. Sono valori di listino senza promozioni e **non includono** dominio, backup esterno, configurazione sicura e manutenzione.
+
+**Attenzione:** l'immagine Docker è distribuibile, ma non è ancora un servizio MCP pubblico pronto per la produzione: la configurazione attuale è solo locale. Il documento illustra l'architettura remota consigliata, il confronto con il PC acceso e una checklist di sicurezza, senza suggerire di pubblicare la porta 8765 o il semplice token Bearer su Internet.
+
 ## 📦 Immagine pubblicata su GitHub Container Registry (GHCR)
 
 GitHub **Packages / Container Registry** è il registro delle immagini Docker. Non è un server su cui girano i container: ospita un'immagine da scaricare. Il workflow [publish-ghcr.yml](.github/workflows/publish-ghcr.yml) costruisce e pubblica l'immagine per **Linux/amd64** (Docker Desktop su Windows e Mac Intel) e **Linux/arm64** (Mac Apple Silicon), usando solo il `GITHUB_TOKEN` di GitHub Actions.
