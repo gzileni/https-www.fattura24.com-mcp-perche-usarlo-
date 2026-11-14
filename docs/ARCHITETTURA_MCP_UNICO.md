@@ -38,7 +38,11 @@ viene verificata dal provider durante il collegamento.
 ## Avvio e OAuth senza clone sul PC
 
 Eseguire il launcher standalone della piattaforma con un esecutore locale
-abilitato. Dopo la creazione del container:
+abilitato. Se il container esistente usa l’immagine precedente, aggiornarlo
+esplicitamente con `-ReplaceExisting` (Windows) o `--replace-existing`
+(macOS/Linux): il launcher ricrea il container conservando il volume e il token
+privato. Il solo `docker pull` non aggiorna un container già creato.
+Dopo la creazione del container con la nuova immagine:
 
 ```sh
 docker exec -it fattura24-mcp python /app/connect_official.py

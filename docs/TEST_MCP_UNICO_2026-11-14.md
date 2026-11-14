@@ -29,11 +29,45 @@ Sono valori del provider simulato, non valori dell’account utente.
 
 ## Docker/GitHub Actions
 
-Il workflow pubblicazione è configurato per ripetere il collaudo dimostrativo
-OAuth/wrapper dentro l’immagine candidata e nel digest GHCR pubblicato, entrambi
-con `--network none`. Il risultato della nuova esecuzione verrà registrato dopo
-il completamento del workflow; i risultati precedenti non vengono attribuiti
-alla nuova immagine.
+Commit implementato: `acde8055291b312e31a7354c3fa50cf0997b0589`.
+
+[Workflow Tests](https://github.com/gzileni/https-www.fattura24.com-mcp-perche-usarlo-/actions/runs/43598911481): **SUPERATO** (Python, build Docker e MCP integration).
+
+[Workflow GHCR](https://github.com/gzileni/https-www.fattura24.com-mcp-perche-usarlo-/actions/runs/43598911442): **SUPERATO**, inclusi candidato, pubblicazione multiarchitettura, pull per digest, collaudo del pubblicato e launcher Linux eseguito due volte con stesso container.
+
+Il collaudo dimostrativo OAuth/wrapper è stato **realmente eseguito** dentro
+l’immagine candidata e nel digest GHCR pubblicato, entrambi con `--network none`:
+`[OK] OAuth PKCE demo + report_bilancino wrapper + local tools on the SAME /mcp; no real network`.
+Anche lo smoke test dei sei tool locali e `pip check` sono superati.
+
+| Identità/verifica | Esito |
+| --- | --- |
+| Tag immagine | `latest`, `sha-acde805` |
+| Digest indice pubblico | `sha256:bb294863dc6d528fa69bc94b6fe880c2a08d7e44ef8838231e36c09cb0a0eb0b` |
+| Manifest AMD64 eseguito | `sha256:47997010b204f05f5f2becd06d08df66a4d049fcb05585e93621f409ebd50b16` |
+| Manifest ARM64 pubblicato | `sha256:bfb44ce8775756982ab04602d3980ede104bf32ab9765523c8c50c7dfc2c2912` |
+| Accesso pubblico GHCR | Verificato anche senza login, digest `latest` coerente |
+| Launcher Linux | Primo avvio e riuso superati, ID container invariato |
+| Utente runtime | `bridge`, non root |
+| HEALTHCHECK Docker | Al rapido inspect ancora `starting`; non attesa la transizione a `healthy`. Endpoint `/health` verificato direttamente |
+
+L’esecuzione runtime del collaudo è AMD64; la build/manifest ARM64 non equivale a
+un test completo su Apple Silicon o altro host ARM64. Nessuna verifica sul PC
+Windows dell’utente. Il parser PowerShell CI ha verificato soltanto la sintassi
+del launcher Windows.
+
+## Verifiche pubbliche sul servizio reale (senza account)
+
+Dall’ambiente Linux di lavoro sono state realmente interrogate soltanto le
+informazioni pubbliche del provider e una richiesta initialize senza credenziali:
+
+- `/.well-known/oauth-protected-resource`: HTTP **200**, resource
+  `https://www.app.fattura24.com/mcp`.
+- `/.well-known/oauth-authorization-server`: HTTP **200**; issuer, authorize,
+  token e registration endpoint coerenti con il codice; PKCE **S256** dichiarato.
+- `POST /mcp` initialize senza Authorization: HTTP **401**, challenge Bearer con
+  URL dei metadata protetti. Nessuna registrazione client reale, nessun consenso,
+  nessun token richiesto e nessun report interrogato in queste verifiche.
 
 ## Limiti
 
