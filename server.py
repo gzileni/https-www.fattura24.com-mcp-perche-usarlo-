@@ -4,7 +4,8 @@ import json
 import os
 from mcp.server.fastmcp import FastMCP
 from starlette.responses import PlainTextResponse
-from core import Document, preview, make_xml
+from core import Document, preview, make_xml, fattura24_xml
+from fattura24_client import configured, register_invoice
 
 mcp = FastMCP("Fattura24 Preview Bridge", stateless_http=True, json_response=True)
 
@@ -14,8 +15,9 @@ def bridge_status() -> dict:
     return {
         "status": "ready",
         "mode": "preview_only",
-        "tools": ["bridge_status", "prepare_invoice", "invoice_xml_preview", "prepare_ddt_notes"],
-        "writes_enabled": False,
+        "tools": ["bridge_status", "prepare_invoice", "invoice_xml_preview", "prepare_ddt_notes", "invoice_api_payload_preview", "save_invoice_to_fattura24"],
+        "writes_enabled": configured(),
+        "writes_require_explicit_confirmation": True,
         "ddt_registration_enabled": False,
         "sdi_transmission_enabled": False,
     }
@@ -41,6 +43,24 @@ def prepare_ddt_notes(customer: str, goods: str, destination: str, transport: st
         "status": "notes_only",
         "next_step": "Verificare e inserire i dati nell'interfaccia ufficiale Fattura24.",
     }
+
+@mcp.tool()
+def invoice_api_payload_preview(payload_json: str) -> dict:
+    """Generate Fattura24 SaveDocument payload preview; no API call."""
+    doc = Document.model_validate(json.loads(payload_json))
+    return {"preview": preview(doc), "save_document_xml": fattura24_xml(doc), "warning": "Verificare i campi e il regime fiscale; solo fatture semplici."}
+
+@mcp.tool()
+def save_invoice_to_fattura24(payload_json: str, request_id: str, confirmation: str) -> dict:
+    """SAVE AN ACTUAL INVOICE in Fattura24 using its official SaveDocument endpoint.
+
+    Use ONLY after the human saw the exact preview and explicitly requested the
+    save. Ask them to confirm with phrase CONFERMO IL SALVATAGGIO IN FATTURA24.
+    Never call autonomously, for testing, or retry after timeout. Requires
+    FATTURA24_ENABLE_WRITES=true and a private local API key. Does NOT send SdI.
+    """
+    doc = Document.model_validate(json.loads(payload_json))
+    return register_invoice(doc, request_id=request_id, confirmation=confirmation)
 
 @mcp.custom_route("/health", methods=["GET"])
 async def health(request):
