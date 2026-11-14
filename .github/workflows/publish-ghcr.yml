@@ -55,3 +55,18 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           provenance: true
+      - name: Verify image is available in GHCR
+        run: |
+          docker buildx imagetools inspect ghcr.io/gzileni/fattura24-mcp-bridge:latest
+          docker pull --platform linux/amd64 ghcr.io/gzileni/fattura24-mcp-bridge:latest
+      - name: Run a no-write MCP integration test from the PUBLISHED image
+        run: |
+          printf 'BRIDGE_TOKEN=%s\nFATTURA24_ENABLE_WRITES=false\n' "$(openssl rand -hex 32)" > .env
+          docker compose up -d --no-build --pull never
+          python scripts/smoke_test.py
+      - name: Cleanup local test
+        if: always()
+        run: |
+          docker compose logs --tail=100 || true
+          docker compose down -v || true
+          rm -f .env
