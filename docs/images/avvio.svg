@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 340" role="img" aria-label="Tre passi: installa Docker, esegui lo script, controlla health">
+<rect width="960" height="340" rx="22" fill="#f5f9ff"/><style>text{font-family:Arial,sans-serif;fill:#17305a}.title{font-size:27px;font-weight:700}.box{fill:#fff;stroke:#97b8dd;stroke-width:2}.step{font-size:20px;font-weight:700}.detail{font-size:15px}.n{font-size:26px;font-weight:800;fill:#245fac}</style>
+<text x="45" y="54" class="title">Avvio sul proprio PC, senza VPS</text>
+<rect class="box" x="35" y="105" rx="17" width="275" height="157"/><text class="n" x="57" y="144">01</text><text class="step" x="58" y="176">Installa Docker</text><text class="detail" x="58" y="204">Windows 11 / macOS</text><text class="detail" x="58" y="229">Download dal sito ufficiale</text>
+<rect class="box" x="343" y="105" rx="17" width="275" height="157"/><text class="n" x="365" y="144">02</text><text class="step" x="366" y="176">Avvia lo script</text><text class="detail" x="366" y="204">PowerShell oppure Terminale</text><text class="detail" x="366" y="229">Crea token e avvia container</text>
+<rect class="box" x="651" y="105" rx="17" width="275" height="157"/><text class="n" x="673" y="144">03</text><text class="step" x="675" y="176">Verifica /health</text><text class="detail" x="675" y="204">127.0.0.1:8765/health</text><text class="detail" x="675" y="229">Risposta attesa: ok</text>
+<path d="M312 185 h27 m-7 -7 7 7 -7 7 M619 185 h28 m-8 -7 8 7 -8 7" stroke="#245fac" stroke-width="3" fill="none"/>
+<text class="detail" x="42" y="307">Se Docker non è installato, lo script si interrompe. Nessuna installazione invisibile.</text>
+</svg>

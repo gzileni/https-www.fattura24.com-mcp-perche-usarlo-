@@ -1,0 +1,21 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "fattura24-ai-open-source",
+  "version": "0.1.0",
+  "description": "Skill e connessione al server MCP ufficiale Fattura24 per analisi dei dati. Include guida a bozze locali non collegate al cloud.",
+  "author": {"name": "Community contributors"},
+  "license": "MIT",
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Fattura24 AI Open Source",
+        "shortDescription": "Analisi Fattura24 via MCP",
+        "longDescription": "Connette il server MCP ufficiale in sola lettura, senza promettere creazione di documenti. Per le anteprime Docker locali vedi il README del repository.",
+        "developerName": "Community contributors",
+        "category": "Productivity",
+        "capabilities": ["Interactive"],
+        "defaultPrompt": "Aiutami a consultare il mio fatturato in Fattura24, citando i dati effettivamente disponibili."
+      }
+    }
+  }
+}

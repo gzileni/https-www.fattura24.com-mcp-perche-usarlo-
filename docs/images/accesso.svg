@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 370" role="img" aria-label="Matrice di accesso: il MCP ufficiale è remoto, il bridge Docker è locale">
+<rect width="960" height="370" rx="22" fill="#f5f9ff"/><style>text{font-family:Arial,sans-serif;fill:#17305a}.h{font-weight:700;font-size:22px}.v{font-size:18px}.good{fill:#147b4d}.warn{fill:#b35a13}.muted{fill:#5b6d86}</style>
+<text x="40" y="55" class="h">Quale accesso funziona da quale dispositivo?</text>
+<rect x="35" y="92" width="890" height="44" rx="9" fill="#dceaff"/><text x="56" y="121" class="h">Dispositivo</text><text x="380" y="121" class="h">MCP Fattura24</text><text x="681" y="121" class="h">Bridge Docker</text>
+<g class="v"><text x="56" y="176">PC con Docker acceso</text><text class="good" x="380" y="176">Sì, se autorizzato</text><text class="good" x="682" y="176">Sì, in locale</text>
+<text x="56" y="228">Altro PC / ufficio</text><text class="good" x="380" y="228">Sì, se autorizzato</text><text class="warn" x="682" y="228">Solo rete sicura</text>
+<text x="56" y="280">Smartphone</text><text class="good" x="380" y="280">Se client compatibile</text><text class="warn" x="682" y="280">Non configurato</text></g>
+<text class="muted" x="55" y="338" font-size="16">Il PC Docker deve rimanere acceso. GitHub pubblico ≠ server pubblico.</text>
+</svg>

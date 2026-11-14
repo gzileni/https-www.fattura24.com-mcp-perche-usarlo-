@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 460" role="img" aria-label="Architettura: ChatGPT o Claude, MCP ufficiale per lettura, bridge Docker per anteprime">
+<rect width="960" height="460" rx="22" fill="#f5f9ff"/><style>text{font-family:Arial,sans-serif;fill:#17305a}.title{font-size:28px;font-weight:700}.box{fill:#fff;stroke:#aac2e2;stroke-width:2}.t{font-size:19px;font-weight:bold}.sub{font-size:15px}.line{stroke:#4774ba;stroke-width:4;fill:none;stroke-linecap:round}.dash{stroke-dasharray:9 9}</style>
+<text x="45" y="50" class="title">Fattura24 MCP Bridge — come funziona</text>
+<rect class="box" x="30" y="100" rx="18" width="235" height="90"/><text x="52" y="135" class="t">PC / Mac / telefono</text><text x="52" y="163" class="sub">Utente autorizzato</text>
+<rect class="box" x="350" y="100" rx="18" width="240" height="90"/><text x="377" y="135" class="t">ChatGPT / Claude</text><text x="377" y="163" class="sub">Client AI con MCP</text>
+<rect class="box" x="670" y="84" rx="18" width="258" height="95"/><text x="692" y="120" class="t">MCP ufficiale</text><text x="692" y="150" class="sub">Report e lettura dati</text>
+<rect class="box" x="350" y="274" rx="18" width="240" height="105"/><text x="379" y="308" class="t">Bridge Docker</text><text x="378" y="337" class="sub">Solo anteprime</text><text x="378" y="361" class="sub">Windows e Mac</text>
+<rect class="box" x="670" y="274" rx="18" width="258" height="105"/><text x="720" y="310" class="t">Fattura24</text><text x="696" y="343" class="sub">Gestionale online</text>
+<path class="line" d="M265 145 H350 M590 140 H670 M799 179 V274"/><path class="line dash" d="M470 190 V274"/><text x="484" y="242" class="sub">HTTPS da configurare</text>
+<path class="line dash" d="M590 326 H670"/><text x="603" y="307" class="sub">NO scrittura</text>
+<text x="40" y="429" class="sub">Il repository GitHub contiene il codice, non ospita automaticamente un container attivo.</text>
+</svg>
