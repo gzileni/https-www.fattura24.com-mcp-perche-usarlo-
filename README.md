@@ -6,6 +6,31 @@
 
 ![Schema dell'architettura](docs/images/architettura.svg)
 
+## 🐳 Un'unica immagine contiene già TUTTO il server MCP
+
+**Non bisogna installare un altro server MCP.** Nell'immagine `ghcr.io/gzileni/fattura24-mcp-bridge:latest` sono già presenti:
+- Python, dipendenze e server HTTP **Uvicorn**;
+- server **MCP Streamable HTTP** alla porta interna `8765`, percorso `/mcp`;
+- tool MCP del bridge e client REST Fattura24;
+- endpoint di verifica `/health`.
+
+Per avviarla è sufficiente **Docker**, un token privato e il comando `docker run`: **non servono Git, clone del repository, Python sull'host, Docker Compose o un secondo container**. Esempio concettuale (il token va generato e custodito localmente, non usato letteralmente come sotto):
+
+```text
+docker pull ghcr.io/gzileni/fattura24-mcp-bridge:latest
+docker run -d --name fattura24-mcp \
+  -p 127.0.0.1:8765:8765 \
+  --env-file /PERCORSO/PRIVATO/bridge.env \
+  -v fattura24_state:/data \
+  ghcr.io/gzileni/fattura24-mcp-bridge:latest
+```
+
+Per l'uso reale, preferisci i [launcher standalone Windows e Mac](scripts/), che generano il token e applicano altre opzioni di sicurezza.
+
+**Attenzione alla differenza tra container e client:** una volta avviato, `http://127.0.0.1:8765/mcp` è un server MCP *locale* già funzionante; ChatGPT cloud non raggiunge l'indirizzo `127.0.0.1` del PC. Per un accesso remoto serve un endpoint HTTPS con autenticazione conforme al client. Il codice attuale **non è ancora un endpoint pubblico sicuro pronto da esporre su Internet**. La porta `8765` deve rimanere accessibile solo localmente, dietro una connessione sicura progettata separatamente.
+
+**Aruba VPS:** per questa singola applicazione Python, senza browser headless né modelli LLM locali, il punto di partenza da valutare è **1 vCPU / 1 GB RAM**, non 4 GB. Il piano **O1I1 da 2,49 €/mese + IVA** è una scelta plausibile per uso leggero, da verificare misurando RAM, latenza ed eventuali riavvii. Consulta l'[analisi completa](docs/ARUBA_VPS_COSTI.md).
+
 ## 🎯 A cosa serve?
 
 Vuoi chiedere a un assistente AI: *«Preparami una fattura per 10 unità a 25 euro + IVA»*, controllare i totali e ottenere un'anteprima senza aprire decine di schermate. Questo repository contiene un piccolo **server MCP** avviabile con Docker Desktop su Windows o Mac, istruzioni per ChatGPT e una skill per Claude.
@@ -73,7 +98,7 @@ bash /tmp/fattura24-launch.sh
 
 ## 💶 Aruba VPS: quanto costa tenere Fattura24 MCP online 24/7?
 
-Ho aggiunto una [**analisi dei costi Aruba VPS con prezzi ufficiali e scenari concreti**](docs/ARUBA_VPS_COSTI.md), verificata il **14 novembre 2026**. Per un singolo bridge con Docker e margine per un reverse proxy, il punto di partenza consigliato è **Aruba Cloud VPS O2A4 (2 vCPU, 4 GB): 6,29 € + IVA/mese**, cioè circa **7,67 € IVA inclusa**. In caso di futura automazione browser per i DDT, valutare **O4A8 (4 vCPU, 8 GB): 11,79 € + IVA/mese**. Sono valori di listino senza promozioni e **non includono** dominio, backup esterno, configurazione sicura e manutenzione.
+Ho aggiunto una [**analisi dei costi Aruba VPS con prezzi ufficiali e scenari concreti**](docs/ARUBA_VPS_COSTI.md), verificata il **14 novembre 2026**. Per l'attuale **singolo container MCP Python**, il punto di partenza economico è **Aruba Cloud VPS O1I1 (1 vCPU, 1 GB): 2,49 € + IVA/mese**, cioè circa **3,04 € IVA inclusa**, da verificare con test RAM e stabilità. In caso di futura automazione browser per i DDT, valutare **O4A8 (4 vCPU, 8 GB): 11,79 € + IVA/mese**. Sono valori di listino senza promozioni e **non includono** dominio, backup esterno, configurazione sicura e manutenzione.
 
 **Attenzione:** l'immagine Docker è distribuibile, ma non è ancora un servizio MCP pubblico pronto per la produzione: la configurazione attuale è solo locale. Il documento illustra l'architettura remota consigliata, il confronto con il PC acceso e una checklist di sicurezza, senza suggerire di pubblicare la porta 8765 o il semplice token Bearer su Internet.
 
