@@ -8,3 +8,5 @@ tests/
 docs/
 chatgpt-plugin/
 .claude/
+
+*.sqlite3
