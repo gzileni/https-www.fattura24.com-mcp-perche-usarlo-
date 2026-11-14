@@ -205,3 +205,16 @@ Le fonti seguenti sono documentazione **del fornitore**, non una certificazione 
 ## ⚖️ Licenza e marchi
 
 Codice e diagrammi originali sotto [licenza MIT](LICENSE). Il nome **Fattura24** è un marchio del relativo titolare. L'uso del nome serve a identificare il servizio interoperabile; **non** implica partnership o approvazione.
+
+
+## 📇 Rubrica clienti, verifica API e PDF — estensioni
+
+Il Docker include tre ulteriori operazioni basate su API **documentate**:
+
+- `verify_fattura24_api_key`: chiama `TestKey` **soltanto su richiesta esplicita**, mai come sonda di disponibilità.
+- `customer_payload_preview` e `save_customer_to_fattura24`: crea **oppure aggiorna** una scheda cliente tramite `SaveCustomer`; richiede `FATTURA24_ENABLE_WRITES=true`, `request_id` unico e la frase **CONFERMO CREAZIONE O AGGIORNAMENTO CLIENTE** dopo l'anteprima. Fattura24 può aggiornare un cliente già esistente, quindi non è una prova innocua.
+- `download_document_pdf`: scarica il PDF già creato, tramite `GetFile` e `docId`. Per ragioni di riservatezza, il risultato contiene il documento codificato base64; non mostrarlo per intero in chat e non inserirlo nei log.
+
+Fonti: [TestKey](https://www.fattura24.com/api/verifica/), [SaveCustomer](https://www.fattura24.com/api/crea-contatto/), [GetFile](https://www.fattura24.com/api/download-pdf/).
+
+**Limiti espliciti:** la generazione di PDF di DDT o la compilazione del gestionale tramite un browser automatizzato non sono ancora presenti. Anche una futura automazione browser richiederà una sessione autenticata sul dispositivo sotto controllo dell'utente e test sulla UI reale. Non esiste un metodo per attivare un server Docker spento da un plugin cloud senza un agente locale o un sistema remoto già operativo.

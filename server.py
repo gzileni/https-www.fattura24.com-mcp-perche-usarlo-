@@ -6,6 +6,7 @@ from mcp.server.fastmcp import FastMCP
 from starlette.responses import PlainTextResponse
 from core import Document, preview, make_xml, fattura24_xml
 from fattura24_client import configured, register_invoice
+from fattura24_extra import Customer, customer_xml, test_key_once, save_customer, get_pdf
 
 mcp = FastMCP("Fattura24 Preview Bridge", stateless_http=True, json_response=True)
 
@@ -15,7 +16,7 @@ def bridge_status() -> dict:
     return {
         "status": "ready",
         "mode": "preview_only",
-        "tools": ["bridge_status", "prepare_invoice", "invoice_xml_preview", "prepare_ddt_notes", "invoice_api_payload_preview", "save_invoice_to_fattura24"],
+        "tools": ["bridge_status", "prepare_invoice", "invoice_xml_preview", "prepare_ddt_notes", "invoice_api_payload_preview", "save_invoice_to_fattura24", "verify_fattura24_api_key", "customer_payload_preview", "save_customer_to_fattura24", "download_document_pdf"],
         "writes_enabled": configured(),
         "writes_require_explicit_confirmation": True,
         "ddt_registration_enabled": False,
@@ -61,6 +62,37 @@ def save_invoice_to_fattura24(payload_json: str, request_id: str, confirmation: 
     """
     doc = Document.model_validate(json.loads(payload_json))
     return register_invoice(doc, request_id=request_id, confirmation=confirmation)
+
+@mcp.tool()
+def verify_fattura24_api_key() -> dict:
+    """Verify a configured API key ONCE, only after explicit user request. Not a health check."""
+    return test_key_once()
+
+@mcp.tool()
+def customer_payload_preview(payload_json: str) -> dict:
+    """Show XML prior to any possible customer create/update."""
+    customer = Customer.model_validate(json.loads(payload_json))
+    return {"xml": customer_xml(customer),
+            "warning": "SaveCustomer aggiorna anche clienti esistenti con stessa P.IVA/CF/nome!"}
+
+@mcp.tool()
+def save_customer_to_fattura24(payload_json: str, request_id: str, confirmation: str) -> dict:
+    """CREATES OR UPDATES a real customer. Preview + explicit human confirmation required.
+
+    User must type CONFERMO CREAZIONE O AGGIORNAMENTO CLIENTE after reviewing.
+    Requires local API key, writes enabled, and unique request_id. No blind retry.
+    """
+    customer = Customer.model_validate(json.loads(payload_json))
+    return save_customer(customer, request_id, confirmation)
+
+@mcp.tool()
+def download_document_pdf(doc_id: str) -> dict:
+    """Retrieve a PDF from user's Fattura24 account. Contains sensitive data.
+
+    Requires local FATTURA24_API_KEY. Returned base64 can be large; avoid
+    calling when the user only needs an invoice summary.
+    """
+    return get_pdf(doc_id)
 
 @mcp.custom_route("/health", methods=["GET"])
 async def health(request):

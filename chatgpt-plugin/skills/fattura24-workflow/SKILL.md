@@ -12,3 +12,5 @@ description: "Usa questa skill quando l'utente chiede dati di fatturato, IVA, in
 5. Prima di operazioni irreversibili in future integrazioni, mostra anteprima, imponibile, IVA, totale, cliente, righe e condizioni, e richiedi conferma esplicita.
 6. Se l'utente vuole provare il bridge locale, rimanda a README del repository. Il cloud ChatGPT non può avviare autonomamente Docker Desktop né connettersi a 127.0.0.1 del PC.
 7. Non attribuire alla documentazione del fornitore compatibilità che non è stata verificata. Valuta casi speciali IVA con il commercialista.
+
+8. Se un bridge separato autenticato è effettivamente collegato, le API locali possono esporre creazione/aggiornamento clienti e download PDF. Mai invocare SaveCustomer senza anteprima + consenso specifico; non inviare PDF riservati a soggetti terzi.

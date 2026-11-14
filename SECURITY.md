@@ -14,3 +14,6 @@
 - Un eventuale modulo SaveDocument deve essere progettato separatamente con consenso umano verificabile, controllo anti-duplicati, gestione degli errori incerti, registrazione non sensibile degli eventi e verifica contrattuale API.
 - Le app ChatGPT cloud e Claude cloud non hanno capacità standard di installare/avviare Docker sul tuo PC.
 - Per segnalare vulnerabilità: apri una segnalazione privata a chi mantiene il repository, senza pubblicare token o dati sensibili.
+
+- Le API aggiuntive SaveCustomer possono aggiornare anagrafiche preesistenti: chiedere autorizzazione esplicita su identità e dati proposti.
+- GetFile restituisce file PDF riservati: mai registrarne il contenuto nei log o includerlo in prompt non necessari.

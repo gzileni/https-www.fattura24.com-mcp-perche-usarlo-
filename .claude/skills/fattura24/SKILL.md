@@ -28,3 +28,5 @@ description: "Quando l'utente desidera interpretare i report Fattura24, controll
 
 https://www.fattura24.com/mcp/perche-usarlo/
 https://www.fattura24.com/documentazione-legale/regolamento-api/
+
+11. Se effettivamente disponibili, `verify_fattura24_api_key` non è un health check periodico; `save_customer_to_fattura24` può aggiornare un cliente esistente e richiede specifica conferma; `download_document_pdf` recupera dati riservati in base64.
