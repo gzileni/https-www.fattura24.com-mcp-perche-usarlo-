@@ -19,3 +19,7 @@ Fonti: https://www.fattura24.com/mcp/riferimento-tecnico/ e https://www.fattura2
 L'immagine Docker multipiattaforma viene pubblicata automaticamente con il workflow `.github/workflows/publish-ghcr.yml` in `ghcr.io/gzileni/fattura24-mcp-bridge:latest`. Gli script `scripts/start.ps1` e `scripts/start-mac.sh` la scaricano prima di avviare il container.
 
 **Importante:** il plugin ChatGPT in questa cartella si collega esclusivamente al MCP ufficiale remoto Fattura24; non è autorizzato ad avviare Docker Desktop sul PC. L'avvio del container richiede un processo locale autorizzato. Per ChatGPT cloud la connessione a un MCP on-premises richiede Secure MCP Tunnel o un endpoint remoto con autenticazione adeguata. L'immagine GHCR pubblica non equivale a un server raggiungibile su Internet.
+
+## Avvio senza clonare il repository
+
+Il launcher standalone per Windows è [launch-standalone.ps1](../scripts/launch-standalone.ps1); per macOS è [launch-standalone.sh](../scripts/launch-standalone.sh). Entrambi utilizzano soltanto Docker, scaricano l'immagine GHCR e avviano un container locale protetto. Le skill ChatGPT e Claude descrivono come richiamarli **in presenza di un esecutore locale realmente disponibile**; il plugin cloud ChatGPT attuale non dispone di accesso shell al dispositivo dell'utente. Non dichiarare che l'avvio sia avvenuto finché non è stata verificata la risposta /health.
