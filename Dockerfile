@@ -3,6 +3,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 WORKDIR /app
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt && useradd --uid 10001 --create-home bridge
+RUN mkdir -p /data && chown bridge:bridge /data
 COPY --chown=bridge:bridge core.py server.py fattura24_client.py ./
 USER bridge
 EXPOSE 8765
