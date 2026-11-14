@@ -39,3 +39,17 @@ def test_bad_rate_rejected():
     }])
     with pytest.raises(ValueError):
         compute(doc)
+
+def test_fattura24_api_xml():
+    from core import fattura24_xml
+    doc = sample()
+    doc.customer_address = "Via Demo 1"
+    doc.customer_city = "Roma"
+    doc.customer_postcode = "00100"
+    doc.customer_vat_code = "01234567890"
+    doc.destination_code = "0000000"
+    root = ET.fromstring(fattura24_xml(doc))
+    assert root.findtext("./Document/DocumentType") == "FE"
+    assert root.findtext("./Document/FeDestinationCode") == "0000000"
+    assert root.findtext("./Document/Total") == "24.40"
+    assert root.findtext("./Document/SendEmail") == "false"
