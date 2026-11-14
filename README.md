@@ -2,7 +2,7 @@
 
 ![Stato: prototipo](https://img.shields.io/badge/stato-prototipo-orange) ![Windows](https://img.shields.io/badge/Windows-11-blue) ![macOS](https://img.shields.io/badge/macOS-Intel%20%7C%20Apple%20Silicon-blue) ![Licenza MIT](https://img.shields.io/badge/licenza-MIT-green)
 
-> **Progetto open source non ufficiale**, indipendente da Fattura24, OpenAI e Anthropic. **Oggi crea solo ANTEPRIME**: non registra fatture né DDT, non invia documenti allo SdI. Non inserire dati reali finché non avrai verificato privacy, autorizzazioni e correttezza delle bozze.
+> **Progetto open source non ufficiale**, indipendente da Fattura24, OpenAI e Anthropic. La modalità predefinita è **sola anteprima**. Include adesso anche una **prima integrazione di scrittura reale per fatture semplici** tramite API ufficiali, disattivata finché l'utente non abilita esplicitamente le operazioni. DDT, invio SdI, automazione di Docker da ChatGPT e accesso remoto non sono completati.
 
 ![Schema dell'architettura](docs/images/architettura.svg)
 
@@ -10,7 +10,7 @@
 
 Vuoi chiedere a un assistente AI: *«Preparami una fattura per 10 unità a 25 euro + IVA»*, controllare i totali e ottenere un'anteprima senza aprire decine di schermate. Questo repository contiene un piccolo **server MCP** avviabile con Docker Desktop su Windows o Mac, istruzioni per ChatGPT e una skill per Claude.
 
-**Attenzione:** la funzionalità di analisi dei dati contabili è già disponibile tramite **il server MCP ufficiale Fattura24**, separato dal bridge. Il server ufficiale è prevalentemente di sola lettura. Il bridge qui pubblicato è un esperimento di preparazione documenti.
+**Attenzione:** la funzionalità di analisi dei dati contabili è già disponibile tramite **il server MCP ufficiale Fattura24**, separato dal bridge. Il server ufficiale è prevalentemente di sola lettura. Il bridge supporta anche il salvataggio REST opzionale di **fatture semplici** quando configurato e attivato; resta necessario il controllo dei documenti nell'interfaccia ufficiale.
 
 ### Cosa funziona
 
@@ -21,8 +21,8 @@ Vuoi chiedere a un assistente AI: *«Preparami una fattura per 10 unità a 25 eu
 | Anteprima imponibile, IVA e totale | ✅ |
 | Anteprima XML esemplificativo | ✅ — **non** è un XML fiscale certificato |
 | Preparazione dati DDT | ✅ solo appunti |
-| Registrare fatture in Fattura24 | ❌ da sviluppare, con test e conferma umana |
-| Registrare DDT in Fattura24 | ❌ endpoint API pubblico non confermato |
+| Registrare fatture in Fattura24 | 🧪 Prima implementazione SaveDocument, **opt-in**, con conferma esplicita e anti-duplicati; non collaudata su account reale |
+| Registrare DDT in Fattura24 | ⚠️ Non supportato dall'endpoint SaveDocument documentato. Serve integrazione con interfaccia web supportata oppure funzionalità ufficiale aggiuntiva |
 | Invio automatico allo SdI | ❌ non supportato |
 | ChatGPT apre Docker Desktop da solo | ❌ non può controllare il PC senza agente locale autorizzato |
 | Accesso smartphone al container | ❌ non configurato: serve PC acceso, accesso remoto HTTPS e autenticazione |
@@ -36,7 +36,7 @@ flowchart TD
     AI -. "solo con URL HTTPS autenticato e configurato" .-> B["Bridge MCP Docker\nanteprime soltanto"]
     B --> D["Docker Desktop\nPC acceso"]
     O --> F["Fattura24"]
-    B -. "scrittura NON implementata" .-> F
+    B -. "SaveDocument opzionale, solo fatture semplici" .-> F
 ```
 
 ![Come avviare il progetto](docs/images/avvio.svg)
@@ -86,6 +86,27 @@ docker compose logs --tail=50
 ```
 
 Usa solo dati fittizi durante i test. Docker pubblica il servizio **esclusivamente** su `127.0.0.1:8765`.
+
+## 🧾 Salvataggio reale di fatture (funzione sperimentale, disattivata per sicurezza)
+
+**Novità:** il Docker include `fattura24_client.py`, che utilizza l'endpoint ufficiale `POST /api/v0.3/SaveDocument` per **fatture semplici** di tipo `I` (analogica) oppure `FE` (elettronica). Il salvataggio crea il documento nell'account Fattura24, **non** lo invia allo SdI. Fatture con ritenute, casse, reverse charge, altri regimi speciali e casistiche complesse richiedono verifiche e possono non essere gestite da queste API. I DDT non sono ancora registrabili automaticamente dal bridge. Documentazione: [creare documento](https://www.fattura24.com/api/crea-documento/) e [fattura elettronica](https://www.fattura24.com/api/crea-fattura-elettronica/).
+
+**Prima di attivarlo:** leggi il [regolamento API Fattura24](https://www.fattura24.com/documentazione-legale/regolamento-api/) che richiede un ambiente di test e controllo manuale. Crea prima documenti di prova **sul tuo account** e verifica gli esiti. Non effettuare test di scrittura con documenti che non vuoi registrare.
+
+**Configurazione:** apri il file locale `.env` (creato dallo script di avvio). Aggiungi:
+
+```dotenv
+FATTURA24_API_KEY=LA_TUA_CHIAVE_FATTURA24
+FATTURA24_ENABLE_WRITES=true
+```
+
+La chiave si genera in **Fattura24 → Configurazione → App e servizi esterni → API**, se prevista dal tuo piano. Non confonderla con le API OpenAI. **Non metterla su GitHub, in ChatGPT o nella skill**. Ricarica il container con `docker compose up -d --force-recreate`.
+
+La chiamata `save_invoice_to_fattura24` è accessibile solo via MCP protetto dal token locale; richiede **l'anteprima del documento, una conferma esplicita dell'utente**, la stringa `CONFERMO IL SALVATAGGIO IN FATTURA24` e un `request_id` unico per quel tentativo. Lo stesso identificatore non genera una seconda fattura. In caso di timeout/errore ambiguo l'operazione resta marcata **uncertain**: **non riprovare automaticamente**; controlla Fattura24 per evitare duplicati. Lo storico tecnico anti-duplicati è conservato nel volume Docker `fattura24_state`. Non eliminare quel volume quando riavvii.
+
+Lo strumento `invoice_api_payload_preview` restituisce il vero payload XML **SaveDocument** (non XML FatturaPA) che l'API riceverebbe. `invoice_xml_preview`, invece, resta l'esempio generico e non deve essere inviato all'API.
+
+**Limiti attuali:** nessuna automazione SdI, nessun PDF generato dal bridge, nessun browser gestito per DDT. La guida Fattura24 prevede che l'invio delle fatture elettroniche allo SdI avvenga **dall'interfaccia Fattura24**. Questa implementazione non è stata collaudata con credenziali reali; gli strumenti sono sottoposti a test unitari e ai controlli GitHub Actions, non a una certificazione fiscale.
 
 ## 🧪 Verificare che funzioni
 
@@ -147,6 +168,7 @@ Oppure usa GitHub Actions (workflow incluso) dopo il primo commit.
 ├── compose.yaml               # Porta accessibile solo dal PC
 ├── server.py                  # MCP con protezione Bearer
 ├── core.py                    # Modelli e calcoli anteprima
+├── fattura24_client.py        # SaveDocument API opt-in, senza ritentativi automatici
 ├── scripts/start.ps1          # Windows: controlla/apre Docker
 ├── scripts/start-mac.sh       # Mac: controlla/apre Docker
 ├── chatgpt-plugin/            # Plugin portabile, MCP ufficiale
