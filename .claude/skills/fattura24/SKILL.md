@@ -1,43 +1,30 @@
 ---
 name: fattura24
-description: "Quando l'utente desidera interpretare i report Fattura24, controllare documenti con MCP autorizzato o preparare bozze di fatture/DDT senza inviarle."
+description: "Avvio automatico locale di Docker Fattura24 MCP e lavoro con gli strumenti del gestionale, quando Claude Code dispone di shell locale autorizzata."
 ---
 
-# Fattura24 con Claude
+# Fattura24 MCP — skill Claude Code
 
-## Modalità consentite
+## Avvio senza clone: comportamento predefinito
 
-**Lettura:** utilizza un MCP Fattura24 realmente collegato e autenticato (se il client Claude lo supporta) e soltanto gli strumenti che espone. Non inventare connessioni o dati.
+Quando l'utente chiede di avviare Fattura24, scaricare l'immagine Docker, installare il bridge, testarlo o collegarlo a Claude:
 
-**Bozza:** se è collegato un server MCP di anteprima locale, usa `bridge_status`, `prepare_invoice`, `invoice_xml_preview` e `prepare_ddt_notes`. La bozza NON è registrata. Il bridge dispone anche di uno strumento opzionale di registrazione fatture semplici, diverso dall'XML dimostrativo.
+1. Verifica che la sessione sia **Claude Code sul computer dell'utente**, con un tool shell disponibile. Una skill NON installa strumenti né dà automaticamente permessi di sistema. Su Claude Web o app mobile, spiega che non puoi controllare Docker Desktop remoto.
+2. Prima di eseguire comandi che scaricano codice e avviano container richiedi l'approvazione del sistema e dell'utente; non aggirare le richieste di autorizzazione. Controlla Docker con `docker info`; se non è installato, comunica che va installato dall'utente.
+3. **Non chiedere git clone, non richiedere Docker Compose né Python.** Usa lo script standalone della piattaforma dal repository pubblico:
+   - Windows: `https://raw.githubusercontent.com/gzileni/https-www.fattura24.com-mcp-perche-usarlo-/main/scripts/launch-standalone.ps1`
+   - macOS (Intel o Apple Silicon): `https://raw.githubusercontent.com/gzileni/https-www.fattura24.com-mcp-perche-usarlo-/main/scripts/launch-standalone.sh`
+4. Scarica il launcher come file temporaneo, mostra il codice all'utente per la revisione e **solo dopo approvazione** eseguilo. Non eseguire pipe cieche `curl | bash` o `iex (irm ...)`. Usa `powershell -ExecutionPolicy Bypass -File <file>` su Windows oppure `bash <file>` su Mac.
+5. Il launcher usa `docker pull ghcr.io/gzileni/fattura24-mcp-bridge:latest` e `docker run`, crea un token locale persistente, lascia le scritture disabilitate e pubblica la porta soltanto su `127.0.0.1:8765`.
+6. Se `fattura24-mcp` esiste già e gira, lo lascia invariato. Se è fermo, lo riavvia senza distruggere dati o ruotare il token. **Non** sostituire automaticamente un container esistente. Il parametro `-ReplaceExisting` (Windows) o `--replace-existing` (Mac) richiede una seconda conferma esplicita.
+7. Verifica `http://127.0.0.1:8765/health` e, se necessario, `docker logs --tail 50 fattura24-mcp`.
+8. Se richiesto e se il tuo client lo supporta, proponi una connessione MCP Streamable HTTP locale a `http://127.0.0.1:8765/mcp` con `Authorization: Bearer <token>`, senza esporre il token in chat, screenshot o log. Il token locale è in `%LOCALAPPDATA%\Fattura24MCP\bridge.env` su Windows, `~/.config/fattura24-mcp/bridge.env` su macOS.
+9. Per i test chiama soltanto `bridge_status` e `prepare_invoice` con dati inventati. **Mai** creare fatture o aggiornare clienti soltanto per verificare il collegamento.
 
-## Procedura
+## Uso strumenti Fattura24
 
-1. Verifica quali tool sono realmente disponibili.
-2. Se l'utente chiede fatture o DDT, chiedi solo i campi indispensabili mancanti; non inventare dati fiscali o aliquote.
-3. Mostra ragione sociale, righe, quantità, prezzi, IVA e totali con le ipotesi.
-4. Contrassegna chiaramente ogni risultato come `ANTEPRIMA NON REGISTRATA`.
-5. Per registrare una fattura semplice, usa `invoice_api_payload_preview` per mostrare tutti i dati, poi solo dopo esplicita conferma umana usa `save_invoice_to_fattura24` con `request_id` unico e la frase `CONFERMO IL SALVATAGGIO IN FATTURA24`. Verifica che il bridge dica `writes_enabled=true`. Non usare per test casuali.
-6. La registrazione non è invio SdI. Controlla il documento nell'interfaccia ufficiale, che resta necessaria per inviare allo SdI. Per DDT il bridge offre solo preparazione dati; NON dichiarare di aver creato un DDT in Fattura24.
-7. Se la risposta API è incerta o va in timeout, NON ripetere la chiamata: controlla manualmente per evitare duplicati.
-8. Non chiedere chiavi API o token in chat.
-9. Nessuna skill può installare o avviare Docker sul PC dall'esecuzione cloud. Suggerisci gli script locali solo se l'utente controlla il dispositivo.
-10. Non accedere a server privati senza consenso, non esporre token nei log e non aprire porte pubbliche.
+Usa soltanto MCP effettivamente collegati e autorizzati. MCP ufficiale Fattura24 serve alla consultazione dei dati. Il bridge locale offre anteprime, salvataggio opzionale di alcune fatture semplici e operazioni clienti. Prima di ogni salvataggio: riepilogo, conferma umana esplicita e richiesta univoca. Non dichiarare che i DDT vengono registrati o che la fattura viene inviata allo SdI: non è implementato.
 
-## Documentazione
-
-https://www.fattura24.com/mcp/perche-usarlo/
-https://www.fattura24.com/documentazione-legale/regolamento-api/
-
-11. Se effettivamente disponibili, `verify_fattura24_api_key` non è un health check periodico; `save_customer_to_fattura24` può aggiornare un cliente esistente e richiede specifica conferma; `download_document_pdf` recupera dati riservati in base64.
-
-## Installazione e avvio locale, solo in Claude Code con shell autorizzata
-
-Se l'utente chiede «avvia Fattura24», «scarica l'immagine», «deploy locale»:
-1. Verifica di operare sul **computer locale** (non su claude.ai, una VM remota o una chat senza terminale). Richiedi il normale consenso all'esecuzione dei comandi shell; non aggirare i prompt di autorizzazione.
-2. Usa il repository clonato: su Windows esegui `powershell -ExecutionPolicy Bypass -File .\scripts\start.ps1`; su Mac esegui `bash ./scripts/start-mac.sh`. I comandi verificano Docker, scaricano `ghcr.io/gzileni/fattura24-mcp-bridge:latest`, avviano il container e creano un token locale. Non installano Docker Desktop in modo occulto.
-3. Testa `http://127.0.0.1:8765/health` e se il client è compatibile con MCP Streamable HTTP, configura l'endpoint locale `http://127.0.0.1:8765/mcp` e l'header Bearer con token dal file `.env`, solo dentro una configurazione locale privata. **Non stampare il token** in log, chat o output condivisi. Chiedi autorizzazione prima di modificare la configurazione del client.
-4. Non chiamare mai `save_invoice_to_fattura24` o `save_customer_to_fattura24` per testare la connessione. Usa `bridge_status` e `prepare_invoice` con dati fittizi.
-5. Se Docker non è installato, segnala chiaramente che la skill non può funzionare e fornisci il link al sito Docker. Se il PC è spento non esiste avvio da remoto.
-
-Nota: l'installazione del repository e l'esecuzione locale sono prerequisiti. Una skill **non** concede capacità di esecuzione da sola; funziona solo in un host che consenta strumenti shell.
+Fonti:
+- https://www.fattura24.com/mcp/perche-usarlo/
+- https://github.com/gzileni/https-www.fattura24.com-mcp-perche-usarlo-/tree/main/scripts
