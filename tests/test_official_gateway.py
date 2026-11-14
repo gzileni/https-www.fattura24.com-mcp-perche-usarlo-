@@ -101,8 +101,30 @@ def test_oauth_and_wrapper_share_one_mcp_endpoint(tmp_path, monkeypatch):
                 assert (await client.post('/official/connect')).status_code == 401
                 auth = {'Authorization': 'Bearer demo-local-token'}
                 assert (await client.get('/oauth/callback?code=evil&state=evil')).status_code == 400
-                response = await client.post('/official/connect', headers=auth)
-                flow = response.json()
+                headers = {**auth, 'Accept': 'application/json, text/event-stream', 'MCP-Protocol-Version': '2025-03-26'}
+                async def rpc(method, params=None):
+                    payload = {'jsonrpc': '2.0', 'id': 1, 'method': method}
+                    if params is not None:
+                        payload['params'] = params
+                    r = await client.post('/mcp', headers=headers, json=payload)
+                    assert r.status_code == 200, r.text
+                    if r.headers.get("Mcp-Session-Id"):
+                        headers["Mcp-Session-Id"] = r.headers["Mcp-Session-Id"]
+                    return r.json()['result']
+                await rpc('initialize', {'protocolVersion': '2025-03-26', 'capabilities': {}, 'clientInfo': {'name': 'demo', 'version': '1'}})
+                before = await rpc('tools/list', {})
+                assert 'connect_fattura24' in {t['name'] for t in before['tools']}
+                assert 'report_bilancino' not in {t['name'] for t in before['tools']}
+                connected = await rpc('tools/call', {'name': 'connect_fattura24', 'arguments': {}})
+                flow = connected['structuredContent']
+                repeat = await rpc('tools/call', {'name': 'connect_fattura24', 'arguments': {}})
+                assert repeat['structuredContent']['authorization_url'] == flow['authorization_url']
+                # A client declaring URL elicitation receives the native MCP URL request.
+                headers.pop('Mcp-Session-Id', None)
+                await rpc('initialize', {'protocolVersion': '2025-11-25', 'capabilities': {'elicitation': {'url': {}}}, 'clientInfo': {'name': 'demo-native', 'version': '1'}})
+                native = await client.post('/mcp', headers=headers, json={'jsonrpc':'2.0','id':2,'method':'tools/call','params':{'name':'connect_fattura24','arguments':{}}})
+                assert native.json()['error']['code'] == -32042
+                assert native.json()['error']['data']['elicitations'][0]['url'] == flow['authorization_url']
                 assert flow['state'] == 'awaiting_authorization', flow
                 query = parse_qs(urlsplit(flow['authorization_url']).query)
                 fake.code_challenge = query['code_challenge'][0]
@@ -112,6 +134,9 @@ def test_oauth_and_wrapper_share_one_mcp_endpoint(tmp_path, monkeypatch):
                 await asyncio.wait_for(connection.login_task, 10)
                 assert connection.state == 'ready'
                 assert fake.verifier_checked
+                ready = await rpc('tools/call', {'name': 'connect_fattura24', 'arguments': {}})
+                assert ready['structuredContent']['state'] == 'ready'
+                assert ready['structuredContent']['authorization_url'] is None
                 assert os.stat(storage.path).st_mode & 0o777 == 0o600
                 # Storage survives a new connection object and never exposes tokens in status.
                 restored = OfficialConnection(PrivateOAuthStorage(storage.path), httpx.MockTransport(fake))
@@ -124,6 +149,8 @@ def test_oauth_and_wrapper_share_one_mcp_endpoint(tmp_path, monkeypatch):
                         payload['params'] = params
                     r = await client.post('/mcp', headers=headers, json=payload)
                     assert r.status_code == 200, r.text
+                    if r.headers.get("Mcp-Session-Id"):
+                        headers["Mcp-Session-Id"] = r.headers["Mcp-Session-Id"]
                     return r.json()['result']
                 await rpc('initialize', {'protocolVersion': '2025-03-26', 'capabilities': {}, 'clientInfo': {'name': 'demo', 'version': '1'}})
                 listing = await rpc('tools/list', {})

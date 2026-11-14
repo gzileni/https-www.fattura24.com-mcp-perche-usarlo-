@@ -31,6 +31,7 @@ rimasti disabilitati durante tutti i test.
 
 Senza OAuth, l’elenco contiene solo i tool locali: non vengono esposti wrapper
 fittizi e non viene avviato automaticamente un login durante la discovery.
+Il tool locale `connect_fattura24` è sempre esposto per avviare OAuth dalla chat.
 `bridge_status.official` distingue credenziali presenti, stato e tool scoperti.
 Non è una certificazione della validità corrente dei token: la validità reale
 viene verificata dal provider durante il collegamento.
@@ -42,18 +43,27 @@ abilitato. Se il container esistente usa l’immagine precedente, aggiornarlo
 esplicitamente con `-ReplaceExisting` (Windows) o `--replace-existing`
 (macOS/Linux): il launcher ricrea il container conservando il volume e il token
 privato. Il solo `docker pull` non aggiorna un container già creato.
-Dopo la creazione del container con la nuova immagine:
+Dopo la creazione del container con la nuova immagine, la procedura normale
+parte dalla conversazione del client collegato al bridge:
 
-```sh
-docker exec -it fattura24-mcp python /app/connect_official.py
-```
+1. Utente: «Collega Fattura24 e mostrami il bilancino 2026».
+2. Assistente: chiama il tool locale `connect_fattura24`, disponibile anche
+   prima del collegamento dell’account ufficiale.
+3. Se il client annuncia capability `elicitation.url`, il server restituisce
+   la richiesta standard URL-required (`-32042`), che il client può presentare
+   come richiesta di apertura browser. Altrimenti il risultato contiene
+   `authorization_url`, da mostrare come link cliccabile nella stessa chat.
+4. L’utente effettua login e consenso esclusivamente sul sito Fattura24.
+5. La callback raggiunge `http://127.0.0.1:8765/oauth/callback`. L’assistente
+   richiama `connect_fattura24`; solo `state=ready` conferma discovery riuscita.
+6. Aggiorna `tools/list` o riconnette il client e riprende la richiesta originale.
 
-Il comando inizia l’OAuth e mostra un link di autorizzazione sul dominio
-Fattura24. Aprirlo nel browser sul computer che ospita Docker e completare il
-login. La callback ritorna a `http://127.0.0.1:8765/oauth/callback`. Il comando
-attende l’esito: soltanto `[OK] Fattura24 collegato` indica discovery riuscita.
-Aggiornare `tools/list` nel client o riconnetterlo per vedere i tool ufficiali.
-Non è implementata una notifica push del cambiamento dell’elenco.
+Non occorre eseguire PowerShell o `docker exec` per iniziare OAuth dalla chat.
+`connect_official.py` rimane un’alternativa diagnostica facoltativa.
+Il container non tenta di aprire un browser al proprio interno. La comparsa
+concreta di una finestra/pulsante dipende dal supporto del client; resta disponibile
+il normale link nella conversazione. Non è implementata una notifica push del
+cambiamento dell’elenco.
 
 La callback con questo URI deve essere accettata dal provider al momento della
 registrazione OAuth. Questa accettazione e il login dell’account reale non sono
@@ -99,3 +109,5 @@ quella pubblicata, con `--network none`, oltre al collaudo HTTP locale.
 Fonti tecniche del provider:
 - https://www.fattura24.com/mcp/riferimento-tecnico/
 - https://www.fattura24.com/mcp/toolDisponibili/
+
+Il trasporto mantiene le sessioni MCP (`Mcp-Session-Id`) per rispettare le capability dichiarate dal singolo client. L’URL e il formato Streamable HTTP restano invariati.

@@ -3,6 +3,8 @@ import hmac
 import json
 import os
 from mcp.server.fastmcp import FastMCP
+from mcp.types import ToolAnnotations, ElicitRequestURLParams
+from mcp.shared.exceptions import UrlElicitationRequiredError
 from starlette.responses import PlainTextResponse
 from core import Document, preview, make_xml, fattura24_xml
 from fattura24_client import configured, register_invoice
@@ -11,7 +13,8 @@ from fattura24_extra import Customer, customer_xml, test_key_once, save_customer
 from official_gateway import OfficialConnection, ConnectionRoutes
 
 official = OfficialConnection()
-mcp = FastMCP("Fattura24 Unified MCP Bridge", stateless_http=True, json_response=True)
+mcp = FastMCP("Fattura24 Unified MCP Bridge", stateless_http=False, json_response=True,
+    instructions="Un solo MCP: wrapper ufficiali e tool locali. Se l'utente chiede dati Fattura24 e l'account non e collegato, chiama connect_fattura24 nella stessa chat, mostra il link e chiedi di aprirlo nel browser per il login. Non chiedere password, API key o token in chat e non richiedere comandi Docker per autenticarsi. Dopo il login richiama connect_fattura24 per verificare ready, aggiorna tools/list e riprendi la richiesta. Non creare documenti per test.")
 
 @mcp.tool()
 async def bridge_status() -> dict:
@@ -20,12 +23,35 @@ async def bridge_status() -> dict:
         "status": "ready",
         "mode": "official_wrappers_and_local_extensions",
         "official": await official.status(),
-        "tools": ["bridge_status", "prepare_invoice", "invoice_xml_preview", "prepare_ddt_notes", "invoice_api_payload_preview", "save_invoice_to_fattura24", "verify_fattura24_api_key", "customer_payload_preview", "save_customer_to_fattura24", "download_document_pdf"] + [t.name for t in official.tools],
+        "tools": ["bridge_status", "prepare_invoice", "invoice_xml_preview", "prepare_ddt_notes", "invoice_api_payload_preview", "save_invoice_to_fattura24", "verify_fattura24_api_key", "customer_payload_preview", "save_customer_to_fattura24", "download_document_pdf", "connect_fattura24"] + [t.name for t in official.tools],
         "writes_enabled": configured(),
         "writes_require_explicit_confirmation": True,
         "ddt_registration_enabled": False,
         "sdi_transmission_enabled": False,
     }
+
+@mcp.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
+async def connect_fattura24() -> dict:
+    """Connect Fattura24 from THIS chat, or check an authorization already in progress.
+
+    Use when the user asks to connect/login or needs real reports while disconnected.
+    Show authorization_url as a clickable link and ask the user to open it in their
+    browser and authorize Fattura24. NEVER request passwords, API keys or tokens in
+    chat. Do not ask the user to run a terminal command. After they finish, call this
+    tool again; only state=ready confirms discovery. Refresh tools/list and resume
+    the original request. This tool never creates invoices or updates customers.
+    """
+    result = await official.start_login()
+    result["next_step"] = (
+        "Collegamento verificato. Aggiorna tools/list e riprendi la richiesta dell'utente."
+        if result["state"] == "ready" else
+        "Chiedi all'utente di aprire authorization_url nel browser e autorizzare Fattura24; dopo richiama connect_fattura24."
+        if result.get("authorization_url") else
+        "Collegamento in corso: richiama connect_fattura24 per verificarne l'esito."
+        if result["state"] == "connecting" else
+        "Collegamento non riuscito. Verificare raggiungibilita e riprovare dalla chat."
+    )
+    return result
 
 @mcp.tool()
 def prepare_invoice(payload_json: str) -> dict:
@@ -110,6 +136,18 @@ async def unified_tools():
 
 @mcp._mcp_server.call_tool()
 async def unified_call(name: str, arguments: dict):
+    if name == "connect_fattura24":
+        result = await connect_fattura24()
+        params = mcp.get_context().session.client_params
+        elicitation = params.capabilities.elicitation if params else None
+        # URL-required errors work with the JSON/stateless transport too; direct
+        # server->client elicitation requests require a bidirectional transport.
+        if result.get("authorization_url") and elicitation and elicitation.url is not None:
+            raise UrlElicitationRequiredError([ElicitRequestURLParams(
+                mode="url", url=result["authorization_url"],
+                message="Apri Fattura24 nel browser e autorizza il collegamento. Non inserire credenziali nella chat.",
+                elicitationId="fattura24-" + official.login_id)])
+        return result
     local_names = {t.name for t in await mcp.list_tools()}
     if name in local_names:
         return await mcp.call_tool(name, arguments)

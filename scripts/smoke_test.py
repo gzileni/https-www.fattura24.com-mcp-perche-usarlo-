@@ -16,13 +16,14 @@ import xml.etree.ElementTree as ET
 
 BASE = os.getenv("BRIDGE_URL", "http://127.0.0.1:8765").rstrip("/")
 PROTOCOL = "2025-03-26"
+SESSION_ID = None
 SAFE_TOOLS = {
     "bridge_status", "prepare_invoice", "invoice_xml_preview",
     "prepare_ddt_notes", "invoice_api_payload_preview", "customer_payload_preview",
 }
 EXTERNAL_TOOLS = {
     "save_invoice_to_fattura24", "save_customer_to_fattura24",
-    "verify_fattura24_api_key", "download_document_pdf",
+    "verify_fattura24_api_key", "download_document_pdf", "connect_fattura24",
 }
 
 
@@ -43,12 +44,15 @@ def local_token():
 
 
 def request(method, path, data=None, headers=None, timeout=10):
+    global SESSION_ID
     body = json.dumps(data).encode() if data is not None else None
     h = dict(headers or {})
     if body is not None:
         h["Content-Type"] = "application/json"
     req = urllib.request.Request(BASE + path, data=body, headers=h, method=method)
     with urllib.request.urlopen(req, timeout=timeout) as response:
+        if response.headers.get("Mcp-Session-Id"):
+            SESSION_ID = response.headers["Mcp-Session-Id"]
         raw = response.read()
         return response.status, json.loads(raw) if raw and body is not None else raw.decode()
 
@@ -56,7 +60,8 @@ def request(method, path, data=None, headers=None, timeout=10):
 def headers(token):
     return {"Authorization": "Bearer " + token,
             "Accept": "application/json, text/event-stream",
-            "MCP-Protocol-Version": PROTOCOL}
+            "MCP-Protocol-Version": PROTOCOL,
+            **({"Mcp-Session-Id": SESSION_ID} if SESSION_ID else {})}
 
 
 def rpc(token, method, params=None, rpc_id=1):
@@ -162,6 +167,7 @@ def main():
     call(token, "prepare_invoice", {"payload_json": '{"customer_name":"DEMO","rows":[]}'}, expect_error=True)
     call(token, "nonexistent_demo_tool", {}, expect_error=True)
     print("[OK] Payload non valido e tool inesistente restituiscono isError")
+    request("DELETE", "/mcp", headers=headers(token))
     print("TUTTI I CONTROLLI SUPERATI: 6 tool locali; nessun report o scrittura Fattura24 chiamati.")
 
 

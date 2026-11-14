@@ -33,4 +33,4 @@ with tempfile.TemporaryDirectory() as path, ExitStack() as stack:
     module.test_oauth_and_wrapper_share_one_mcp_endpoint(Path(path), Patches(stack))
 with tempfile.TemporaryDirectory() as path:
     module.test_disconnected_does_not_contact_provider(Path(path))
-print('[OK] OAuth PKCE demo + report_bilancino wrapper + local tools on the SAME /mcp; no real network')
+print('[OK] Chat OAuth tool + native URL request/link fallback + PKCE + report_bilancino on SAME /mcp; no real network')

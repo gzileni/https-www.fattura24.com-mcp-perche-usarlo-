@@ -7,14 +7,13 @@
 ## Un server MCP unico: ufficiale come wrapper, gap come tool locali
 
 L’assistente configura un solo URL: `http://127.0.0.1:8765/mcp`.
-Dopo l’avvio del container, collegare una volta il proprio account:
-
-```sh
-docker exec -it fattura24-mcp python /app/connect_official.py
-```
-
-Aprire nel browser locale il link OAuth mostrato e autorizzare Fattura24. Poi
-aggiornare `tools/list` o riconnettere il client: nello stesso elenco compariranno
+Nella chat del client già collegato al container, chiedere:
+**«Collega Fattura24 e mostrami il bilancino 2026»**.
+Il tool `connect_fattura24` avvia OAuth dalla stessa conversazione: richiede
+l’apertura del browser tramite URL elicitation se supportata dal client,
+altrimenti restituisce un link cliccabile da presentare in chat. Autorizzare sul
+sito Fattura24; il client richiama il tool per verificare `state=ready`, poi
+aggiorna `tools/list` o riconnette il server: nello stesso elenco compariranno
 `report_bilancino` e gli altri tool ufficiali realmente disponibili, insieme ai
 tool locali. Non servono un secondo MCP o una chiave API per la consultazione.
 
@@ -392,3 +391,5 @@ PowerShell; quest’ultimo controllo non equivale a un test Docker Desktop Windo
 Report di collaudo con evidenze, digest e limiti: [TEST_E2E_2026-11-14.md](docs/TEST_E2E_2026-11-14.md).
 
 La verifica del server unico è documentata in [TEST_MCP_UNICO_2026-11-14.md](docs/TEST_MCP_UNICO_2026-11-14.md); il report E2E precedente fotografa il commit precedente alla federazione.
+
+Autenticazione dalla conversazione e limiti del test: [TEST_AUTH_CHAT_2026-11-14.md](docs/TEST_AUTH_CHAT_2026-11-14.md).

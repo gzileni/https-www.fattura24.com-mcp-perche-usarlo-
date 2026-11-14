@@ -21,12 +21,16 @@ description: "Workflow portabile per consultare Fattura24 con MCP e preparare bo
 ## Server MCP unico (architettura corrente)
 
 - Configurare soltanto `http://127.0.0.1:8765/mcp` nel client locale autorizzato.
-- Dopo l’avvio, se l’utente chiede dati reali e lo stato ufficiale è scollegato,
-  eseguire `docker exec -it fattura24-mcp python /app/connect_official.py` nella
-  shell locale autorizzata e far completare all’utente il login nel browser.
-  Non chiedere password, API key o token OAuth in chat. Il comando resta in
-  attesa fino a completamento o scadenza; non dichiarare collegato l’account
-  senza l’esito positivo. Non avviare OAuth nei test con dati dimostrativi.
+- Se l’utente chiede il collegamento o dati reali mentre l’account è scollegato,
+  chiamare `connect_fattura24` NELLA STESSA CHAT. Il client può presentare una
+  richiesta nativa di apertura browser; in alternativa mostrare `authorization_url`
+  come link cliccabile e chiedere all’utente di autorizzare sul sito Fattura24.
+  Non richiedere comandi PowerShell o Docker per effettuare il login.
+  Non chiedere password, API key o token OAuth in chat. Dopo il login richiamare
+  `connect_fattura24` e dichiarare collegato solo con `state=ready`, quindi
+  aggiornare tools/list e riprendere la richiesta originale. Non avviare OAuth
+  nei test con dati dimostrativi. La configurazione locale del client e l’avvio
+  del container restano prerequisiti distinti dal login dell’account.
 - Aggiornare `tools/list` dopo OAuth: i tool ufficiali mantengono nomi e schemi
   scoperti dal provider; il bridge inoltra chiamate e risposte senza replicarli.
 - Implementare tool locali soltanto per i gap, con nomi non in conflitto.

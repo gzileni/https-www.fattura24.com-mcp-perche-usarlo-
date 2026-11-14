@@ -113,6 +113,7 @@ class OfficialConnection:
         self.authorization_url = None
         self.callback = None
         self.login_task = None
+        self.login_id = None
         self.login_ready = None
 
     async def status(self):
@@ -121,7 +122,7 @@ class OfficialConnection:
 
     async def _redirect(self, url):
         if self.callback is None:
-            raise RuntimeError("OAuth richiesto: eseguire connect_official.py nel container")
+            raise RuntimeError("OAuth richiesto: chiama connect_fattura24 nella chat")
         parsed = urlsplit(url)
         if parsed.scheme != "https" or parsed.netloc != "www.app.fattura24.com" or parsed.path != "/oauth/authorize":
             raise RuntimeError("Endpoint OAuth inatteso")
@@ -187,7 +188,7 @@ class OfficialConnection:
         if name not in READ_TOOLS:
             raise ValueError("Tool ufficiale non consentito: gateway in sola lettura")
         if not await self.storage.get_tokens():
-            raise RuntimeError("Fattura24 non collegato: eseguire connect_official.py nel container")
+            raise RuntimeError("Fattura24 non collegato: chiama connect_fattura24 nella chat")
         if self.login_task and not self.login_task.done():
             raise RuntimeError("Autorizzazione Fattura24 in corso")
         async with self.lock:
@@ -203,7 +204,10 @@ class OfficialConnection:
                 raise RuntimeError("Chiamata MCP ufficiale non riuscita; verificare collegamento e autorizzazione") from None
 
     async def start_login(self):
+        if self.state == "ready" and await self.storage.get_tokens():
+            return {**await self.status(), "authorization_url": None}
         if not self.login_task or self.login_task.done():
+            self.login_id = secrets.token_urlsafe(16)
             self.callback = asyncio.get_running_loop().create_future()
             self.login_ready = asyncio.Event()
             self.authorization_url = None
