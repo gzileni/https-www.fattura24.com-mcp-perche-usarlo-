@@ -5,9 +5,14 @@ services:
     env_file: .env
     ports:
       - "127.0.0.1:8765:8765"
+    volumes:
+      - fattura24_state:/data
     read_only: true
     tmpfs: ["/tmp"]
     security_opt:
       - no-new-privileges:true
     cap_drop:
       - ALL
+
+volumes:
+  fattura24_state:
