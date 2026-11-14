@@ -12,6 +12,8 @@ jobs:
           python-version: "3.12"
       - run: python -m pip install -r requirements-dev.txt
       - run: python -m pytest -q
+      - name: Verifica sintassi launcher macOS/Linux
+        run: bash -n scripts/launch-standalone.sh
       - run: python -m compileall -q core.py server.py fattura24_client.py fattura24_extra.py scripts/smoke_test.py
   docker:
     runs-on: ubuntu-latest
