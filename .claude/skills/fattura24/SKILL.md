@@ -30,3 +30,14 @@ https://www.fattura24.com/mcp/perche-usarlo/
 https://www.fattura24.com/documentazione-legale/regolamento-api/
 
 11. Se effettivamente disponibili, `verify_fattura24_api_key` non è un health check periodico; `save_customer_to_fattura24` può aggiornare un cliente esistente e richiede specifica conferma; `download_document_pdf` recupera dati riservati in base64.
+
+## Installazione e avvio locale, solo in Claude Code con shell autorizzata
+
+Se l'utente chiede «avvia Fattura24», «scarica l'immagine», «deploy locale»:
+1. Verifica di operare sul **computer locale** (non su claude.ai, una VM remota o una chat senza terminale). Richiedi il normale consenso all'esecuzione dei comandi shell; non aggirare i prompt di autorizzazione.
+2. Usa il repository clonato: su Windows esegui `powershell -ExecutionPolicy Bypass -File .\scripts\start.ps1`; su Mac esegui `bash ./scripts/start-mac.sh`. I comandi verificano Docker, scaricano `ghcr.io/gzileni/fattura24-mcp-bridge:latest`, avviano il container e creano un token locale. Non installano Docker Desktop in modo occulto.
+3. Testa `http://127.0.0.1:8765/health` e se il client è compatibile con MCP Streamable HTTP, configura l'endpoint locale `http://127.0.0.1:8765/mcp` e l'header Bearer con token dal file `.env`, solo dentro una configurazione locale privata. **Non stampare il token** in log, chat o output condivisi. Chiedi autorizzazione prima di modificare la configurazione del client.
+4. Non chiamare mai `save_invoice_to_fattura24` o `save_customer_to_fattura24` per testare la connessione. Usa `bridge_status` e `prepare_invoice` con dati fittizi.
+5. Se Docker non è installato, segnala chiaramente che la skill non può funzionare e fornisci il link al sito Docker. Se il PC è spento non esiste avvio da remoto.
+
+Nota: l'installazione del repository e l'esecuzione locale sono prerequisiti. Una skill **non** concede capacità di esecuzione da sola; funziona solo in un host che consenta strumenti shell.

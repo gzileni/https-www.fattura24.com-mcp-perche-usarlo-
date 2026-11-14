@@ -41,6 +41,37 @@ flowchart TD
 
 ![Come avviare il progetto](docs/images/avvio.svg)
 
+
+## 📦 Immagine pubblicata su GitHub Container Registry (GHCR)
+
+GitHub **Packages / Container Registry** è il registro delle immagini Docker. Non è un server su cui girano i container: ospita un'immagine da scaricare. Il workflow [publish-ghcr.yml](.github/workflows/publish-ghcr.yml) costruisce e pubblica l'immagine per **Linux/amd64** (Docker Desktop su Windows e Mac Intel) e **Linux/arm64** (Mac Apple Silicon), usando solo il `GITHUB_TOKEN` di GitHub Actions.
+
+**Nome immagine:** `ghcr.io/gzileni/fattura24-mcp-bridge:latest`.
+
+Al primo caricamento, verifica la visibilità del pacchetto su GitHub → profilo → Packages → fattura24-mcp-bridge → Package settings: se risulta privato, imposta **Public**. Non ho modificato le impostazioni del tuo account. Verifica la pagina Packages prima di dichiararlo scaricabile senza login.
+
+**Deploy locale (non servono Python né compilazione sul PC):**
+
+- Windows PowerShell: `powershell -ExecutionPolicy Bypass -File .\scripts\start.ps1`
+- macOS Intel o Apple Silicon: `bash ./scripts/start-mac.sh`
+- Alternativa: `docker compose pull && docker compose up -d --no-build` dopo aver creato un file `.env` con il token privato.
+
+Gli script verificano Docker, tentano di avviare Docker Desktop se installato ma non attivo, creano un token casuale locale, **scaricano l'immagine pubblicata** e avviano il container. **Non installano Docker Desktop automaticamente**, non aprono le porte su Internet e non attivano le scritture nel gestionale.
+
+### 🤖 Avvio dalla skill di Claude Code
+
+La skill `.claude/skills/fattura24/SKILL.md` contiene istruzioni per Claude Code: in una **sessione locale**, dopo aver ottenuto l'autorizzazione a eseguire shell, Claude può lanciare lo script del sistema operativo e collegare il server MCP all'ambiente locale. Questo è un comando locale approvato, **non** un privilegio concesso automaticamente al modello. Claude Web e l'app mobile non possono avviare Docker sul PC spento.
+
+### 🖥️ Avvio dal plugin ChatGPT
+
+Il plugin ChatGPT remoto non può **autonomamente** accendere Docker Desktop o scaricare immagini sul PC: per l'avvio locale servono una sessione desktop con esecutore locale approvato o l'esecuzione manuale dello script. Il server è collegabile localmente dagli host MCP compatibili; per ChatGPT cloud si usa un **Secure MCP Tunnel** autorizzato, non l'URL `127.0.0.1`. La documentazione OpenAI prevede restrizioni e autorizzazioni per la distribuzione dei plugin desktop con MCP locale. Non dichiarare che un pacchetto GitHub installi un plugin ChatGPT sul tuo account.
+
+### 🔐 Nota importante sul deploy
+
+Non esporre il bridge a Internet tramite `ports: "8765:8765"`. Il server locale utilizza un Bearer token statico, non un'autenticazione OAuth completa per MCP pubblico. Anche se il pacchetto GHCR è pubblico, il container deve rimanere protetto su `127.0.0.1`. Le funzioni di scrittura su fatture e clienti vanno attivate solo dopo prove e approvazione, su un account controllato.
+
+Fonti: [GitHub Docs — publish Docker images](https://docs.github.com/en/actions/tutorials/publish-packages/publish-docker-images), [OpenAI — MCP servers](https://learn.chatgpt.com/docs/extend/mcp), [OpenAI — desktop-only plugins](https://developers.openai.com/plugins/deploy/desktop-only), [Claude Code — skill e MCP](https://support.claude.com/en/articles/14554922-claude-code-user-faq).
+
 ## ✅ Requisiti
 
 **Windows:** Windows 11, Docker Desktop con WSL2 attivo, PowerShell e connessione Internet per scaricare l'immagine base. **Mac:** macOS compatibile, Docker Desktop per chip Intel o Apple Silicon, Terminale. **Non serve** una chiave API OpenAI, né un VPS. Il piano Fattura24 può limitare la disponibilità delle sue API.
@@ -80,7 +111,7 @@ Arresta con `bash ./scripts/stop-mac.sh`.
 Crea `.env` copiando `.env.example` e **sostituisci** il valore `BRIDGE_TOKEN` con una stringa casuale lunga; poi:
 
 ```bash
-docker compose up -d --build
+docker compose pull && docker compose up -d --no-build
 docker compose ps
 docker compose logs --tail=50
 ```
@@ -192,7 +223,7 @@ Oppure usa GitHub Actions (workflow incluso) dopo il primo commit.
 ```text
 .
 ├── Dockerfile                 # Immagine Python multipiattaforma
-├── compose.yaml               # Porta accessibile solo dal PC
+├── compose.yaml               # Immagine GHCR, porta accessibile solo dal PC
 ├── server.py                  # MCP con protezione Bearer
 ├── core.py                    # Modelli e calcoli anteprima
 ├── fattura24_client.py        # SaveDocument API opt-in, senza ritentativi automatici

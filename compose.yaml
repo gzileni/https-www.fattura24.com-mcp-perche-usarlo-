@@ -1,6 +1,8 @@
+# Remote image from GitHub Container Registry; no local build required.
+# Change FATTURA24_IMAGE in your private .env if you want a pinned release.
 services:
   bridge:
-    build: .
+    image: ${FATTURA24_IMAGE:-ghcr.io/gzileni/fattura24-mcp-bridge:latest}
     restart: unless-stopped
     env_file: .env
     ports:
@@ -8,11 +10,11 @@ services:
     volumes:
       - fattura24_state:/data
     read_only: true
-    tmpfs: ["/tmp"]
+    tmpfs:
+      - /tmp
     security_opt:
       - no-new-privileges:true
     cap_drop:
       - ALL
-
 volumes:
   fattura24_state:

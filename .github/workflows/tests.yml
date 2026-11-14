@@ -25,7 +25,8 @@ jobs:
       - name: Avvia container senza credenziali Fattura24
         run: |
           printf "BRIDGE_TOKEN=%s\nFATTURA24_ENABLE_WRITES=false\n" "$(openssl rand -hex 32)" > .env
-          docker compose up -d --build
+          docker build -t ghcr.io/gzileni/fattura24-mcp-bridge:latest .
+          docker compose up -d --no-build --pull never
       - name: Test HTTP, autenticazione e strumenti MCP, senza scritture
         run: python scripts/smoke_test.py
       - name: Log e stop (anche dopo errori)
