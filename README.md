@@ -108,6 +108,33 @@ Lo strumento `invoice_api_payload_preview` restituisce il vero payload XML **Sav
 
 **Limiti attuali:** nessuna automazione SdI, nessun PDF generato dal bridge, nessun browser gestito per DDT. La guida Fattura24 prevede che l'invio delle fatture elettroniche allo SdI avvenga **dall'interfaccia Fattura24**. Questa implementazione non è stata collaudata con credenziali reali; gli strumenti sono sottoposti a test unitari e ai controlli GitHub Actions, non a una certificazione fiscale.
 
+## 🔬 Collaudo automatico sul tuo computer (senza creare fatture)
+
+Questo è **il primo test pratico da eseguire** dopo l'avvio con `start.ps1` (Windows) oppure `start-mac.sh` (Mac). Verifica che l'immagine Docker non si limiti ad avviarsi, ma risponda davvero attraverso il protocollo MCP.
+
+**Windows — PowerShell:**
+```powershell
+python .\scripts\smoke_test.py
+```
+
+**Mac — Terminale:**
+```bash
+python3 ./scripts/smoke_test.py
+```
+
+Per questo test occorre Python sul computer (non serve per far girare il servizio Docker). Se preferisci evitare Python locale, consulta il job `mcp-integration` in **GitHub → Actions → Tests**: GitHub esegue automaticamente lo stesso test in un container, senza chiavi Fattura24.
+
+Il test interroga `/health`, verifica che il server rifiuti richieste MCP senza token, inizializza una sessione MCP, legge l'elenco degli strumenti e invoca `prepare_invoice` con **dati inventati**. Non usa chiavi API né invia richieste a Fattura24. Il risultato atteso è `TUTTI I CONTROLLI SUPERATI`.
+
+In caso di errore, copia **solo il messaggio finale senza token** e verifica:
+
+```bash
+docker compose ps
+docker compose logs --tail=100
+```
+
+**Il collaudo sul tuo PC non può essere eseguito dal cloud ChatGPT.** Gli script devono essere avviati sul sistema dove è installato Docker Desktop. Un test GitHub Actions riuscito conferma l'ambiente CI Linux, non Windows/macOS.
+
 ## 🧪 Verificare che funzioni
 
 ```bash
