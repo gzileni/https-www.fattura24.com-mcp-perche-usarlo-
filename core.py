@@ -82,7 +82,6 @@ def fattura24_xml(doc: Document) -> str:
     NOT a validation of tax compliance, FatturaPA XML, or eligibility.
     More complex tax cases must be entered in the official GUI.
     """
-    from datetime import date
     if doc.document_type not in {"I", "FE"}:
         raise ValueError("Il modulo di scrittura gestisce solo fatture I o FE")
     if not doc.customer_address or not doc.customer_city or not doc.customer_postcode:
@@ -114,8 +113,16 @@ def fattura24_xml(doc: Document) -> str:
         ("Total", f"{net + vat:.2f}"),
         ("SendEmail", "false"),
     ]
-    # The official SaveDocument examples only guarantee the above common fields.
-    # No invented FE delivery tags are emitted; verify FE particulars in Fattura24 GUI.
+    if doc.document_type == "FE":
+        if doc.customer_pec:
+            ET.SubElement(document, "FeCustomerPec").text = doc.customer_pec
+        if doc.destination_code:
+            ET.SubElement(document, "FeDestinationCode").text = doc.destination_code
+        if doc.payment_code:
+            if doc.payment_code not in {"MP01", "MP05", "MP08", "MP12"}:
+                raise ValueError("Codice pagamento FE non supportato in questa versione")
+            ET.SubElement(document, "FePaymentCode").text = doc.payment_code
+    # FE details, VAT special regimes and documentary compliance must be manually checked.
     for k, v in fields:
         ET.SubElement(document, k).text = v
     rows = ET.SubElement(document, "Rows")
