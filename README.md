@@ -201,21 +201,21 @@ Lo strumento `invoice_api_payload_preview` restituisce il vero payload XML **Sav
 
 ## 🔬 Collaudo automatico sul tuo computer (senza creare fatture)
 
-Questo è **il primo test pratico da eseguire** dopo l'avvio con `start.ps1` (Windows) oppure `start-mac.sh` (Mac). Verifica che l'immagine Docker non si limiti ad avviarsi, ma risponda davvero attraverso il protocollo MCP.
+I launcher standalone eseguono automaticamente questo test. Per ripeterlo, usa il comando seguente: verifica il protocollo MCP effettivo del container.
 
 **Windows — PowerShell:**
 ```powershell
-python .\scripts\smoke_test.py
+docker exec fattura24-mcp python /app/smoke_test.py
 ```
 
 **Mac — Terminale:**
 ```bash
-python3 ./scripts/smoke_test.py
+docker exec fattura24-mcp python /app/smoke_test.py
 ```
 
-Per questo test occorre Python sul computer (non serve per far girare il servizio Docker). Se preferisci evitare Python locale, consulta il job `mcp-integration` in **GitHub → Actions → Tests**: GitHub esegue automaticamente lo stesso test in un container, senza chiavi Fattura24.
+Python e il test sono inclusi nell’immagine: sul computer basta Docker. Il job `mcp-integration` in **GitHub → Actions → Tests** esegue lo stesso collaudo sia dall’host CI sia dentro il container, senza chiavi Fattura24. Per sviluppo resta possibile eseguire `python scripts/smoke_test.py` con Python locale e token configurato.
 
-Il test interroga `/health`, verifica che il server rifiuti richieste MCP senza token, inizializza una sessione MCP, legge l'elenco degli strumenti e invoca `prepare_invoice` con **dati inventati**. Non usa chiavi API né invia richieste a Fattura24. Il risultato atteso è `TUTTI I CONTROLLI SUPERATI`.
+Il test interroga `/health`, rifiuta token assenti/errati, completa l’handshake MCP, controlla dieci tool e prova i sei strumenti locali con **dati inventati**, più gli errori attesi. Non usa chiavi API né invia richieste a Fattura24. Il risultato atteso è `TUTTI I CONTROLLI SUPERATI`.
 
 In caso di errore, copia **solo il messaggio finale senza token** e verifica:
 
@@ -369,3 +369,5 @@ pubblicarlo, poi scarica ed esegue **il digest pubblicato**, verifica le dipende
 con `pip check` e prova il launcher Linux due volte per verificarne il riuso.
 Il workflow Tests verifica anche l’accesso HTTP dalla macchina host e la sintassi
 PowerShell; quest’ultimo controllo non equivale a un test Docker Desktop Windows.
+
+Report di collaudo con evidenze, digest e limiti: [TEST_E2E_2026-11-14.md](docs/TEST_E2E_2026-11-14.md).
