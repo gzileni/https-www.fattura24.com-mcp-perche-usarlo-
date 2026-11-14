@@ -1,0 +1,185 @@
+# Fattura24 MCP Bridge · ChatGPT + Claude + Docker
+
+![Stato: prototipo](https://img.shields.io/badge/stato-prototipo-orange) ![Windows](https://img.shields.io/badge/Windows-11-blue) ![macOS](https://img.shields.io/badge/macOS-Intel%20%7C%20Apple%20Silicon-blue) ![Licenza MIT](https://img.shields.io/badge/licenza-MIT-green)
+
+> **Progetto open source non ufficiale**, indipendente da Fattura24, OpenAI e Anthropic. **Oggi crea solo ANTEPRIME**: non registra fatture né DDT, non invia documenti allo SdI. Non inserire dati reali finché non avrai verificato privacy, autorizzazioni e correttezza delle bozze.
+
+![Schema dell'architettura](docs/images/architettura.svg)
+
+## 🎯 A cosa serve?
+
+Vuoi chiedere a un assistente AI: *«Preparami una fattura per 10 unità a 25 euro + IVA»*, controllare i totali e ottenere un'anteprima senza aprire decine di schermate. Questo repository contiene un piccolo **server MCP** avviabile con Docker Desktop su Windows o Mac, istruzioni per ChatGPT e una skill per Claude.
+
+**Attenzione:** la funzionalità di analisi dei dati contabili è già disponibile tramite **il server MCP ufficiale Fattura24**, separato dal bridge. Il server ufficiale è prevalentemente di sola lettura. Il bridge qui pubblicato è un esperimento di preparazione documenti.
+
+### Cosa funziona
+
+| Operazione | Situazione |
+| --- | --- |
+| Analisi fatturato, IVA e incassi | Tramite [MCP ufficiale Fattura24](https://www.fattura24.com/mcp/perche-usarlo/), con autorizzazione al proprio account |
+| Controllo stato del container | ✅ |
+| Anteprima imponibile, IVA e totale | ✅ |
+| Anteprima XML esemplificativo | ✅ — **non** è un XML fiscale certificato |
+| Preparazione dati DDT | ✅ solo appunti |
+| Registrare fatture in Fattura24 | ❌ da sviluppare, con test e conferma umana |
+| Registrare DDT in Fattura24 | ❌ endpoint API pubblico non confermato |
+| Invio automatico allo SdI | ❌ non supportato |
+| ChatGPT apre Docker Desktop da solo | ❌ non può controllare il PC senza agente locale autorizzato |
+| Accesso smartphone al container | ❌ non configurato: serve PC acceso, accesso remoto HTTPS e autenticazione |
+
+## 🧩 Come sono collegati i componenti
+
+```mermaid
+flowchart TD
+    U["Utente: Windows / Mac / Smartphone"] --> AI["ChatGPT o Claude"]
+    AI --> O["MCP ufficiale Fattura24\nlettura e report"]
+    AI -. "solo con URL HTTPS autenticato e configurato" .-> B["Bridge MCP Docker\nanteprime soltanto"]
+    B --> D["Docker Desktop\nPC acceso"]
+    O --> F["Fattura24"]
+    B -. "scrittura NON implementata" .-> F
+```
+
+![Come avviare il progetto](docs/images/avvio.svg)
+
+## ✅ Requisiti
+
+**Windows:** Windows 11, Docker Desktop con WSL2 attivo, PowerShell e connessione Internet per scaricare l'immagine base. **Mac:** macOS compatibile, Docker Desktop per chip Intel o Apple Silicon, Terminale. **Non serve** una chiave API OpenAI, né un VPS. Il piano Fattura24 può limitare la disponibilità delle sue API.
+
+Docker Desktop deve essere installato **prima** di avviare il progetto. Se non c'è, lo script si ferma; non installa software senza consenso.
+
+## 🚀 Avvio in 3 passaggi
+
+### Windows 11
+
+1. Installa [Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/) e avvialo la prima volta.
+2. Scarica il repository come ZIP (pulsante **Code → Download ZIP**) e apri PowerShell nella cartella estratta.
+3. Esegui:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\start.ps1
+curl.exe http://127.0.0.1:8765/health
+```
+
+Se vedi **ok** il container risponde. Lo script crea un token locale nel file `.env`, che non deve essere pubblicato. Arresta con `powershell -File .\scripts\stop.ps1`.
+
+### macOS (Intel e Apple Silicon)
+
+1. Installa [Docker Desktop per Mac](https://docs.docker.com/desktop/setup/install/mac-install/) per il processore corretto.
+2. Apri Terminale nella cartella scaricata.
+3. Esegui:
+
+```bash
+bash ./scripts/start-mac.sh
+curl -fsS http://127.0.0.1:8765/health
+```
+
+Arresta con `bash ./scripts/stop-mac.sh`.
+
+### Senza script (Windows, Mac, Linux con Docker già avviato)
+
+Crea `.env` copiando `.env.example` e **sostituisci** il valore `BRIDGE_TOKEN` con una stringa casuale lunga; poi:
+
+```bash
+docker compose up -d --build
+docker compose ps
+docker compose logs --tail=50
+```
+
+Usa solo dati fittizi durante i test. Docker pubblica il servizio **esclusivamente** su `127.0.0.1:8765`.
+
+## 🧪 Verificare che funzioni
+
+```bash
+curl http://127.0.0.1:8765/health
+```
+
+Per usare gli strumenti MCP `bridge_status`, `prepare_invoice`, `invoice_xml_preview` e `prepare_ddt_notes`, occorre un **client MCP locale** che supporti Streamable HTTP e l'header `Authorization: Bearer <BRIDGE_TOKEN>`. L'URL MCP è `http://127.0.0.1:8765/mcp`. Non incollare il token in ChatGPT o nei ticket pubblici.
+
+Esempio di dati JSON **fittizi** per una bozza:
+
+```json
+{
+  "document_type": "FE",
+  "customer_name": "Cliente di prova",
+  "rows": [{
+    "description": "Prodotto dimostrativo",
+    "quantity": "10",
+    "price_net": "25.00",
+    "vat_code": "22",
+    "vat_description": "22%"
+  }]
+}
+```
+
+Imponibile dimostrativo €250,00; IVA €55,00; totale €305,00 (esempio aritmetico, non controllo fiscale).
+
+### Test automatici
+
+```bash
+python -m pip install -r requirements-dev.txt
+python -m pytest -q
+```
+
+Oppure usa GitHub Actions (workflow incluso) dopo il primo commit.
+
+## 🤖 ChatGPT e Claude
+
+- **ChatGPT**: la configurazione installabile del connettore ufficiale è in [`chatgpt-plugin/`](chatgpt-plugin/). Il bridge locale **non** è raggiungibile dal cloud con `localhost`: la connessione da ChatGPT richiede un URL HTTPS pubblico o una soluzione di accesso supportata, autenticazione appropriata e ulteriori verifiche. Il plugin privato precedentemente creato è [Fattura24 AI Assistant](https://chatgpt.com/plugins/plugins_6af8321d4cb8819187762bb1ba6ada06), **non automaticamente collegato a questo container**.
+- **Claude**: istruzioni in [`.claude/skills/fattura24/SKILL.md`](.claude/skills/fattura24/SKILL.md), utilizzabili come guida; l'effettiva disponibilità degli strumenti MCP dipende dal client e dalla sua configurazione.
+- **Skill portabile**: [`skills/fattura24/SKILL.md`](skills/fattura24/SKILL.md).
+
+![Tabella degli accessi](docs/images/accesso.svg)
+
+| Dove sei? | MCP ufficiale | Bridge Docker |
+| --- | --- | --- |
+| PC sul quale gira Docker | In ChatGPT/Claude se collegato | Usabile con client MCP **locale** |
+| Altro PC | Sì, con account autorizzato | Solo dopo accesso remoto sicuro |
+| Smartphone | Sì, se il client supporta il connettore | Non ancora; richiede un endpoint HTTPS autenticato |
+| PC spento | Sì, il servizio ufficiale è remoto | **No** |
+
+**Non aprire la porta 8765 sul router**. GitHub pubblico pubblica *codice*, non pubblica automaticamente un server. Una VPN da sola non assicura che un client AI cloud possa raggiungere un endpoint privato.
+
+## 📂 Struttura dei file
+
+```text
+.
+├── Dockerfile                 # Immagine Python multipiattaforma
+├── compose.yaml               # Porta accessibile solo dal PC
+├── server.py                  # MCP con protezione Bearer
+├── core.py                    # Modelli e calcoli anteprima
+├── scripts/start.ps1          # Windows: controlla/apre Docker
+├── scripts/start-mac.sh       # Mac: controlla/apre Docker
+├── chatgpt-plugin/            # Plugin portabile, MCP ufficiale
+├── .claude/skills/fattura24/  # Skill Claude
+├── skills/fattura24/          # Skill condivisa
+├── docs/images/               # Diagrammi SVG originali
+├── tests/                     # Test automatici
+├── SECURITY.md                # Sicurezza
+└── LICENSE                    # MIT
+```
+
+## 🔐 Sicurezza
+
+- La chiave API Fattura24 **non è necessaria** per la funzione di sola anteprima e non deve comparire nel repository.
+- Non usare credenziali o dati personali reali negli esempi o nei commit.
+- In caso di timeout durante una futura creazione di fatture, non ritentare alla cieca: rischio duplicazione/numerazione.
+- Qualsiasi futura scrittura richiederà un pannello locale di approvazione, test isolati e verifica manuale. Nessuna promessa di invio automatico SdI.
+- Leggi [SECURITY.md](SECURITY.md) e le condizioni ufficiali prima di integrare le API.
+
+## 📚 Fonti ufficiali e normative tecniche
+
+Le fonti seguenti sono documentazione **del fornitore**, non una certificazione di questo progetto.
+
+1. [Fattura24 — Perché MCP](https://www.fattura24.com/mcp/perche-usarlo/)
+2. [Fattura24 — Tool MCP disponibili](https://www.fattura24.com/mcp/toolDisponibili/)
+3. [Fattura24 — Riferimento tecnico MCP](https://www.fattura24.com/mcp/riferimento-tecnico/)
+4. [Fattura24 — Creare un documento via API REST](https://www.fattura24.com/api/crea-documento/)
+5. [Fattura24 — Regolamento API](https://www.fattura24.com/documentazione-legale/regolamento-api/) — limiti, sicurezza, test, niente chiamate concorrenti e invio SdI manuale.
+6. [Model Context Protocol](https://modelcontextprotocol.io/)
+7. [Docker Desktop](https://docs.docker.com/desktop/)
+8. [OpenAI — Apps SDK / MCP](https://developers.openai.com/apps-sdk/)
+9. [Anthropic — Claude Code Skills](https://code.claude.com/docs/en/skills)
+
+## ⚖️ Licenza e marchi
+
+Codice e diagrammi originali sotto [licenza MIT](LICENSE). Il nome **Fattura24** è un marchio del relativo titolare. L'uso del nome serve a identificare il servizio interoperabile; **non** implica partnership o approvazione.
