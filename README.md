@@ -42,6 +42,35 @@ flowchart TD
 ![Come avviare il progetto](docs/images/avvio.svg)
 
 
+## ⚡ Avvio senza Git, senza clone e senza Compose (Windows / Mac)
+
+L'immagine Docker GHCR viene **scaricata e avviata automaticamente da un launcher locale**. Il launcher fa parte del repository ma non devi clonarlo: può essere scaricato come un singolo script. Le skill istruiscono il rispettivo assistente a farlo **quando dispone realmente di una shell locale autorizzata**.
+
+**Windows PowerShell** — scarica il launcher, controllalo, eseguilo:
+
+```powershell
+$script = Join-Path $env:TEMP 'fattura24-launch.ps1'
+Invoke-WebRequest 'https://raw.githubusercontent.com/gzileni/https-www.fattura24.com-mcp-perche-usarlo-/main/scripts/launch-standalone.ps1' -OutFile $script
+notepad $script
+powershell -ExecutionPolicy Bypass -File $script
+```
+
+**Mac Intel / Apple Silicon** — scarica il launcher, controllalo, eseguilo:
+
+```bash
+curl -fL 'https://raw.githubusercontent.com/gzileni/https-www.fattura24.com-mcp-perche-usarlo-/main/scripts/launch-standalone.sh' -o /tmp/fattura24-launch.sh
+cat /tmp/fattura24-launch.sh
+bash /tmp/fattura24-launch.sh
+```
+
+**Comportamento:** verifica se Docker Desktop è installato; se è spento tenta di avviarlo; se il container `fattura24-mcp` è già presente, lo lascia attivo (o lo riavvia, senza sovrascrivere il token). In assenza del container, esegue `docker pull ghcr.io/gzileni/fattura24-mcp-bridge:latest` e `docker run`, configura `127.0.0.1:8765`, crea il token privato persistente e lascia disabilitate le scritture. I token si trovano in `%LOCALAPPDATA%\Fattura24MCP\bridge.env` (Windows) e `~/.config/fattura24-mcp/bridge.env` (Mac), **non** nel repository e non nella chat.
+
+**Se il container è già in esecuzione da un avvio manuale, non è necessario ricrearlo.** La sostituzione volontaria richiede il parametro `-ReplaceExisting` (Windows) o `--replace-existing` (Mac); non usarlo finché non hai verificato il contenuto e la persistenza delle credenziali del container esistente.
+
+**Claude Code locale:** la skill [`.claude/skills/fattura24/SKILL.md`](.claude/skills/fattura24/SKILL.md) indica di scaricare e avviare automaticamente lo script, previo consenso a eseguire shell. **ChatGPT plugin cloud:** la skill [`chatgpt-plugin/skills/fattura24-workflow/SKILL.md`](chatgpt-plugin/skills/fattura24-workflow/SKILL.md) applica lo stesso flusso **solo se esiste un esecutore locale autorizzato**: il plugin ChatGPT standard non dispone automaticamente di PowerShell o Terminale. L'avvio locale del container e la connessione al cloud ChatGPT restano due operazioni distinte.
+
+**Verifica:** `curl.exe http://127.0.0.1:8765/health` (Windows) oppure `curl http://127.0.0.1:8765/health` (Mac). Risposta attesa: `ok`.
+
 ## 📦 Immagine pubblicata su GitHub Container Registry (GHCR)
 
 GitHub **Packages / Container Registry** è il registro delle immagini Docker. Non è un server su cui girano i container: ospita un'immagine da scaricare. Il workflow [publish-ghcr.yml](.github/workflows/publish-ghcr.yml) costruisce e pubblica l'immagine per **Linux/amd64** (Docker Desktop su Windows e Mac Intel) e **Linux/arm64** (Mac Apple Silicon), usando solo il `GITHUB_TOKEN` di GitHub Actions.
