@@ -24,10 +24,14 @@ Le offerte VPS indicano un indirizzo IPv4 pubblico e un collegamento fino a 1 Gb
 
 ### Quale dimensione scegliere per questo progetto?
 
-- **Test solo MCP Python senza browser:** O1I2 (1 vCPU/2 GB) può essere un punto di partenza economico, *da misurare*: 2 GB possono essere stretti per aggiornamenti e servizi collaterali.
-- **Unico bridge, Docker + reverse proxy HTTPS + un po' di margine:** **O2A4 (2 vCPU/4 GB)** è il **dimensionamento iniziale consigliato**, non un benchmark garantito. Costo di listino **6,29 € + IVA al mese**, cioè circa **7,67 € IVA inclusa**.
-- **Eventuale browser headless per i DDT, automazioni più complesse o più sessioni contemporanee:** valutare **O4A8 (4 vCPU/8 GB)**, circa **11,79 € + IVA/mese**, solo quando l'automazione browser sarà effettivamente implementata e testata. La maggiore RAM non rende di per sé i DDT disponibili.
-- **O1I1 (1 GB):** sconsigliato per un endpoint contabile da usare continuativamente, salvo test molto limitati.
+**Per il software attualmente contenuto nell'immagine Docker, 1 GB di RAM è un dimensionamento iniziale sensato da provare.** Il server MCP è una singola applicazione Python/FastMCP gestita da Uvicorn con un solo worker; non ospita un modello LLM, un database pesante, un browser headless o una seconda istanza MCP. L'elaborazione AI avviene nei client remoti, mentre il container gestisce richieste MCP e chiamate Fattura24.
+
+- **Punto di partenza economico: Aruba Cloud VPS O1I1, 1 vCPU / 1 GB / 20 GB**: **2,49 € + IVA/mese**, circa **3,04 € IVA inclusa**. Per uso personale leggero è un'ipotesi ragionevole, non una garanzia di capacità: **misura l'occupazione RAM reale** sul VPS, inclusi Linux, Docker, proxy TLS e margine per aggiornamenti.
+- **Se la RAM risulta insufficiente: O1I2, 1 vCPU / 2 GB**, **4,49 € + IVA/mese**. Passaggio possibile per maggiore margine senza assumere 4 GB come prerequisito.
+- **O2A4, 2 vCPU / 4 GB** è un upgrade opzionale per carico, più sessioni o componenti ulteriori, **non il piano minimo consigliato** per questo MCP.
+- Un futuro browser headless per i DDT, non implementato, andrebbe dimensionato con un test separato; il requisito futuro non deve aumentare il budget del servizio attuale.
+
+`docker stats`, `free -h`, `docker logs` e un test di utilizzo per alcune ore consentono di verificare RAM, eventuali OOM kill, latenza ed errori. L'uso di un solo processo Python rende 1 GB plausibile, ma la misura dipende anche dalla distribuzione Linux scelta e dai processi accessori.
 
 ## Qual è il costo complessivo?
 
@@ -35,8 +39,8 @@ La fattura Aruba del VPS non è il costo totale del progetto. Ecco tre **scenari
 
 | Scenario | VPS | Canone VPS annuo IVA esclusa | Extra da preventivare | Utilizzo |
 | --- | --- | ---: | --- | --- |
-| **Prova tecnica** | O1I2 | **53,88 €** | dominio se non disponibile; eventuale backup | Verificare Docker e endpoint MCP prima di esporli |
-| **Bridge remoto essenziale (consigliato)** | O2A4 | **75,48 €** | dominio/DNS, backup esterno, protezione accessi e manutenzione | Una piccola installazione Linux 24/7 |
+| **MCP essenziale e uso personale (punto di partenza)** | **O1I1** | **29,88 €** | dominio/DNS se necessario, backup indipendente, TLS e gestione accessi | Un solo container MCP leggero, 1 GB da validare con monitoraggio |
+| **Maggior margine RAM** | O1I2 | **53,88 €** | dominio/DNS, backup esterno, protezione accessi e manutenzione | Se 1 GB non basta nei test |
 | **Sviluppo browser/DDT più pesante** | O4A8 | **141,48 €** | stessi extra, più impegno operativo | Solo se la futura automazione browser lo richiede |
 
 ### Costi aggiuntivi da considerare
@@ -59,15 +63,15 @@ Fonti specifiche: [Let's Encrypt — FAQ](https://letsencrypt.org/docs/faq/), [A
 
 ### Calcolo rapido con IVA
 
-**Scenario consigliato senza extra, O2A4:**
+**Scenario iniziale minimo senza extra, O1I1:**
 
-- Mensile imponibile: **6,29 €**
-- IVA ipotizzata 22%: **1,38 €**
-- Mensile IVA inclusa, arrotondato: **7,67 €**
-- Annuale imponibile a 12 rate: **75,48 €**
-- Annuale teorico IVA inclusa: **92,09 €** usando il totale annuo prima dell'arrotondamento IVA (piccole differenze sono possibili rispetto a 12 fatture mensili arrotondate).
+- Mensile imponibile: **2,49 €**
+- IVA ipotizzata 22%: **0,55 €**
+- Mensile IVA inclusa, arrotondato: **3,04 €**
+- Annuale imponibile a 12 rate: **29,88 €**
+- Annuale teorico IVA inclusa: **36,45 €**, salvo arrotondamenti mensili.
 
-**Scenario con margine per browser, O4A8:** imponibile **11,79 €/mese**, circa **14,38 € IVA inclusa**; **141,48 € imponibile/anno**, circa **172,61 € IVA inclusa**, senza costi accessori.
+**Scenario futuro con margine per browser, O4A8 (non necessario al codice attuale):** imponibile **11,79 €/mese**, circa **14,38 € IVA inclusa**; **141,48 € imponibile/anno**, circa **172,61 € IVA inclusa**, senza costi accessori.
 
 ## Architettura di un possibile deploy VPS
 
@@ -85,7 +89,7 @@ flowchart TD
 
 ### Checklist prima di attivare un server pubblico
 
-1. Attivare VPS Linux O2A4, aggiornare l'OS, creare utente non root e accesso SSH con chiavi.
+1. Attivare VPS Linux O1I1 (1 GB), misurando subito RAM e stabilità; passare a 2 GB solo se necessario, aggiornare l'OS, creare utente non root e accesso SSH con chiavi.
 2. Configurare firewall: porte pubbliche minime `443` per HTTPS e SSH limitato; **mai 8765 pubblica**.
 3. Configurare nome DNS e reverse proxy con TLS, e autenticazione compatibile con i client MCP scelti; testare autorizzazione e disconnessione.
 4. Memorizzare API key Fattura24 come secret sul VPS, mai in GitHub o nei prompt.
@@ -97,9 +101,9 @@ flowchart TD
 
 ## Confronto con il PC locale
 
-| Caratteristica | PC Windows/Mac con Docker | VPS Aruba 2 vCPU / 4 GB |
+| Caratteristica | PC Windows/Mac con Docker | VPS Aruba 1 vCPU / 1 GB |
 | --- | --- | --- |
-| Canone hosting aggiuntivo | Nessuno | **6,29 €/mese + IVA** di listino |
+| Canone hosting aggiuntivo | Nessuno | **2,49 €/mese + IVA** di listino |
 | Sempre accessibile se il PC è spento | **No** | **Sì**, se VPS e applicazione sono attivi |
 | Aggiornamenti / backup | A carico dell'utente | A carico dell'utente |
 | Accesso cloud da smartphone | Richiede tunnel/rete e autenticazione | Potenzialmente più semplice con HTTPS pubblico, **ma da sviluppare** |
@@ -116,4 +120,4 @@ Consultate il **14/11/2026**:
 4. **Let's Encrypt, FAQ ufficiali su TLS e costi:** https://letsencrypt.org/docs/faq/
 5. **Repo e limiti attuali del progetto:** ../README.md e ../SECURITY.md
 
-**Conclusione:** per ospitare questo *bridge* come singolo servizio leggero, il budget di infrastruttura più ragionevole da cui partire è **6,29 €/mese + IVA** su **Aruba VPS O2A4**, esclusi dominio, backup indipendente e lavoro di configurazione. La realizzazione di un servizio remoto sicuro e pienamente compatibile con ChatGPT e Claude è un'attività tecnica aggiuntiva, non una proprietà automatica dell'abbonamento VPS.
+**Conclusione:** per ospitare questo *bridge* come singolo servizio leggero, il budget minimo ragionevole da cui partire è **2,49 €/mese + IVA** su **Aruba VPS O1I1 (1 GB RAM)**, verificando l'occupazione effettiva e la stabilità, esclusi dominio, backup indipendente e lavoro di configurazione. La realizzazione di un servizio remoto sicuro e pienamente compatibile con ChatGPT e Claude è un'attività tecnica aggiuntiva, non una proprietà automatica dell'abbonamento VPS.
