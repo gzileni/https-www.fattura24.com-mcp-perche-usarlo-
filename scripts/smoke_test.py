@@ -60,7 +60,7 @@ def main():
             status, health = request("GET", "/health")
             assert status == 200 and health == "ok"
             break
-        except (urllib.error.URLError, AssertionError):
+        except (OSError, AssertionError):
             if i == 19:
                 raise RuntimeError("Il container non risponde a /health. Esegui docker compose logs --tail=100")
             time.sleep(2)
