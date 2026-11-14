@@ -74,3 +74,61 @@ def make_xml(doc: Document) -> str:
         for field in ("description", "quantity", "price_net", "vat_code"):
             ET.SubElement(entry, field).text = str(getattr(row, field))
     return ET.tostring(root, encoding="unicode")
+
+
+def fattura24_xml(doc: Document) -> str:
+    """Build documented SaveDocument payload for straightforward invoices only.
+
+    NOT a validation of tax compliance, FatturaPA XML, or eligibility.
+    More complex tax cases must be entered in the official GUI.
+    """
+    from datetime import date
+    if doc.document_type not in {"I", "FE"}:
+        raise ValueError("Il modulo di scrittura gestisce solo fatture I o FE")
+    if not doc.customer_address or not doc.customer_city or not doc.customer_postcode:
+        raise ValueError("Indirizzo, CAP e citta del cliente sono obbligatori")
+    if not (doc.customer_vat_code or doc.customer_fiscal_code):
+        raise ValueError("P.IVA o codice fiscale del cliente obbligatorio")
+    if doc.document_type == "FE" and not (doc.destination_code or doc.customer_pec):
+        raise ValueError("Per FE indicare codice destinatario o PEC, da verificare")
+    if any(r.vat_code == "0" for r in doc.rows):
+        raise ValueError("IVA 0: gestire manualmente natura, esenzione e casistiche speciali")
+    amounts = compute(doc)
+    net = sum((a for a, _ in amounts), Decimal("0"))
+    vat = sum((a for _, a in amounts), Decimal("0"))
+    root = ET.Element("Fattura24")
+    document = ET.SubElement(root, "Document")
+    fields = [
+        ("DocumentType", doc.document_type),
+        ("CustomerName", doc.customer_name),
+        ("CustomerAddress", doc.customer_address),
+        ("CustomerPostcode", doc.customer_postcode),
+        ("CustomerCity", doc.customer_city),
+        ("CustomerProvince", doc.customer_province),
+        ("CustomerCountry", doc.customer_country),
+        ("CustomerFiscalCode", doc.customer_fiscal_code),
+        ("CustomerVatCode", doc.customer_vat_code),
+        ("Object", doc.object),
+        ("TotalWithoutTax", f"{net:.2f}"),
+        ("VatAmount", f"{vat:.2f}"),
+        ("Total", f"{net + vat:.2f}"),
+        ("SendEmail", "false"),
+    ]
+    # The official SaveDocument examples only guarantee the above common fields.
+    # No invented FE delivery tags are emitted; verify FE particulars in Fattura24 GUI.
+    for k, v in fields:
+        ET.SubElement(document, k).text = v
+    rows = ET.SubElement(document, "Rows")
+    for row in doc.rows:
+        entry = ET.SubElement(rows, "Row")
+        for tag, value in (
+            ("Description", row.description),
+            ("Qty", str(row.quantity)),
+            ("Um", row.unit),
+            ("Price", f"{row.price_net:.2f}"),
+            ("Discounts", "0"),
+            ("VatCode", row.vat_code),
+            ("VatDescription", row.vat_description or row.vat_code + "%"),
+        ):
+            ET.SubElement(entry, tag).text = value
+    return ET.tostring(root, encoding="unicode")
